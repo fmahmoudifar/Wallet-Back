@@ -5,7 +5,7 @@ from custom_encoder import CustomEncoder
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-dynamodbTableName = "assets"
+dynamodbTableName = "Wallets"
 dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table(dynamodbTableName)
 
@@ -14,8 +14,8 @@ postMethod = "POST"
 patchMethod = "PATCH"
 deleteMethod = "DELETE"
 healthPath = "/health"
-productPath = "/asset"
-productsPath = "/assets"
+productPath = "/wallet"
+productsPath = "/wallets"
 
 
 def lambda_handler(event, context):
@@ -25,36 +25,36 @@ def lambda_handler(event, context):
     if httpMethod == getMethod and path == healthPath:
         response = buildResponse(200)
     elif httpMethod == getMethod and path == productPath:
-        response = getAsset(event["queryStringParameters"]["assetId"])
+        response = getwallet(event["queryStringParameters"]["walletName"])
     elif httpMethod == getMethod and path == productsPath:
-        response = getAssets()
+        response = getwallets()
     elif httpMethod == postMethod and path == productPath:
-        response = saveAsset(json.loads(event["body"]))
+        response = savewallet(json.loads(event["body"]))
     elif httpMethod == patchMethod and path == productPath:
         requestBody = json.loads(event["body"])
-        response = modifyAsset(requestBody["assetId"], requestBody["updateKey"], requestBody["updateValue"])
+        response = modifywallet(requestBody["walletName"], requestBody["updateKey"], requestBody["updateValue"])
     elif httpMethod == deleteMethod and path == productPath:
         requestBody = json.loads(event["body"])
-        response = deleteAsset(requestBody["assetId"])
+        response = deletewallet(requestBody["walletName"])
     else:
         response = buildResponse(404, "Not Found")
     return response
 
-def getAsset(assetId):
+def getwallet(walletName):
     try:
         response = table.get_item(
             Key={
-                "assetId": assetId
+                "walletName": walletName
             }
         )
         if "Item" in response:
             return buildResponse(200, response["Item"])
         else:
-            return buildResponse(404, {"Message": "assetId: {0}s not found".format(assetId)})
+            return buildResponse(404, {"Message": "walletName: {0}s not found".format(walletName)})
     except:
-        logger.exception("Could not get the asset")
+        logger.exception("Could not get the wallet")
 
-def getAssets():
+def getwallets():
     try:
         response = table.scan()
         result = response["Items"]
@@ -68,9 +68,9 @@ def getAssets():
         }
         return buildResponse(200, body)
     except:
-        logger.exception("Could not get the assets")
+        logger.exception("Could not get the wallets")
 
-def saveAsset(requestBody):
+def savewallet(requestBody):
     try:
         table.put_item(Item=requestBody)
         body = {
@@ -80,13 +80,13 @@ def saveAsset(requestBody):
         }
         return buildResponse(200, body)
     except:
-        logger.exception("Could not save the asset")
+        logger.exception("Could not save the wallet")
 
-def modifyAsset(assetId, updateKey, updateValue):
+def modifywallet(walletName, updateKey, updateValue):
     try:
         response = table.update_item(
             Key={
-                "assetId": assetId
+                "walletName": walletName
             },
 
             UpdateExpression="set {0}s = :value".format(updateKey),
@@ -102,13 +102,13 @@ def modifyAsset(assetId, updateKey, updateValue):
         }
         return buildResponse(200, body)
     except:
-        logger.exception("Could not update the asset")
+        logger.exception("Could not update the wallet")
 
-def deleteAsset(assetId):
+def deletewallet(walletName):
     try:
         response = table.delete_item(
             Key={
-                "assetId": assetId
+                "walletName": walletName
             },
             ReturnValues="ALL_OLD"
         )
@@ -119,7 +119,7 @@ def deleteAsset(assetId):
         }
         return buildResponse(200, body)
     except:
-        logger.exception("Could not delete the asset")
+        logger.exception("Could not delete the wallet")
 
 
 def buildResponse(statusCode, body=None):

@@ -3,14 +3,20 @@ from botocore.awsrequest import AWSRequest
 from botocore.auth import SigV4Auth
 from botocore.credentials import Credentials
 
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+
 # AWS credentials
-access_key = ""
-secret_key = ""
-region = "eu-north-1"  # e.g., 'us-east-1'
+access_key = os.getenv("ACCESS_KEY")
+secret_key = os.getenv("SECRET_KEY")
+region = "eu-north-1"  
 
 # API Gateway details
 invoke_url = "https://e31gpskeu0.execute-api.eu-north-1.amazonaws.com/PROD/"
-api_root = "/health"  # e.g., "/items" or "/users/123"
+api_root = "/health"  
 method = "GET"
 payload = ""  # Empty payload for a GET request
 
