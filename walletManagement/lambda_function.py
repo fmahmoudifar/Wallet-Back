@@ -14,8 +14,8 @@ postMethod = "POST"
 patchMethod = "PATCH"
 deleteMethod = "DELETE"
 healthPath = "/health"
-productPath = "/wallet"
-productsPath = "/wallets"
+walletPath = "/wallet"
+walletsPath = "/wallets"
 
 
 def lambda_handler(event, context):
@@ -24,23 +24,23 @@ def lambda_handler(event, context):
     path = event["path"]
     if httpMethod == getMethod and path == healthPath:
         response = buildResponse(200)
-    elif httpMethod == getMethod and path == productPath:
-        response = getwallet(event["queryStringParameters"]["walletName"])
-    elif httpMethod == getMethod and path == productsPath:
-        response = getwallets()
-    elif httpMethod == postMethod and path == productPath:
-        response = savewallet(json.loads(event["body"]))
-    elif httpMethod == patchMethod and path == productPath:
+    elif httpMethod == getMethod and path == walletPath:
+        response = getWallet(event["queryStringParameters"]["walletName"])
+    elif httpMethod == getMethod and path == walletsPath:
+        response = getWallets()
+    elif httpMethod == postMethod and path == walletPath:
+        response = saveWallet(json.loads(event["body"]))
+    elif httpMethod == patchMethod and path == walletPath:
         requestBody = json.loads(event["body"])
-        response = modifywallet(requestBody["walletName"], requestBody["updateKey"], requestBody["updateValue"])
-    elif httpMethod == deleteMethod and path == productPath:
+        response = modifyWallet(requestBody["walletName"], requestBody["updateKey"], requestBody["updateValue"])
+    elif httpMethod == deleteMethod and path == walletPath:
         requestBody = json.loads(event["body"])
-        response = deletewallet(requestBody["walletName"])
+        response = deleteWallet(requestBody["walletName"])
     else:
         response = buildResponse(404, "Not Found")
     return response
 
-def getwallet(walletName):
+def getWallet(walletName):
     try:
         response = table.get_item(
             Key={
@@ -54,7 +54,7 @@ def getwallet(walletName):
     except:
         logger.exception("Could not get the wallet")
 
-def getwallets():
+def getWallets():
     try:
         response = table.scan()
         result = response["Items"]
@@ -70,7 +70,7 @@ def getwallets():
     except:
         logger.exception("Could not get the wallets")
 
-def savewallet(requestBody):
+def saveWallet(requestBody):
     try:
         table.put_item(Item=requestBody)
         body = {
@@ -82,7 +82,7 @@ def savewallet(requestBody):
     except:
         logger.exception("Could not save the wallet")
 
-def modifywallet(walletName, updateKey, updateValue):
+def modifyWallet(walletName, updateKey, updateValue):
     try:
         response = table.update_item(
             Key={
@@ -104,7 +104,7 @@ def modifywallet(walletName, updateKey, updateValue):
     except:
         logger.exception("Could not update the wallet")
 
-def deletewallet(walletName):
+def deleteWallet(walletName):
     try:
         response = table.delete_item(
             Key={
