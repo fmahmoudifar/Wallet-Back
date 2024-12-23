@@ -25,7 +25,10 @@ def lambda_handler(event, context):
     if httpMethod == getMethod and path == healthPath:
         response = buildResponse(200)
     elif httpMethod == getMethod and path == walletPath:
-        response = getWallet(event["queryStringParameters"]["walletName"])
+        queryParams = event["queryStringParameters"]
+        walletName = queryParams["walletName"]
+        username = queryParams["username"]
+        response = getWallet(walletName, username)
     elif httpMethod == getMethod and path == walletsPath:
         response = getWallets()
     elif httpMethod == postMethod and path == walletPath:
@@ -40,19 +43,21 @@ def lambda_handler(event, context):
         response = buildResponse(404, "Not Found")
     return response
 
-def getWallet(walletName):
+def getWallet(walletName, username):
     try:
         response = table.get_item(
             Key={
-                "walletName": walletName
+                "walletName": walletName,
+                "username": username
             }
         )
         if "Item" in response:
             return buildResponse(200, response["Item"])
         else:
-            return buildResponse(404, {"Message": "walletName: {0}s not found".format(walletName)})
-    except:
+            return buildResponse(404, {"Message": f"walletName: {walletName}, username: {username} not found"})
+    except Exception as e:
         logger.exception("Could not get the wallet")
+        return buildResponse(500, {"Message": "Error retrieving wallet"})
 
 def getWallets():
     try:
