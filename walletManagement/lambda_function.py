@@ -38,10 +38,13 @@ def lambda_handler(event, context):
                 response = build_response(400, {"Message": "walletName and username are required"})
             else:
                 response = get_wallet(wallet_name, username)
+                
         elif http_method == GET_METHOD and path == WALLETS_PATH:
             response = get_wallets()
+            
         elif http_method == POST_METHOD and path == WALLET_PATH:
             response = save_wallet(json.loads(event["body"]))
+            
         elif http_method == PATCH_METHOD and path == WALLET_PATH:
             request_body = json.loads(event["body"])
             wallet_name = request_body.get("walletName")
@@ -53,6 +56,7 @@ def lambda_handler(event, context):
                 response = build_response(400, {"Message": "Missing required fields for updating wallet"})
             else:
                 response = modify_wallet(wallet_name, username, update_key, update_value)
+                
         elif http_method == DELETE_METHOD and path == WALLET_PATH:
             request_body = json.loads(event["body"])
             wallet_name = request_body.get("walletName")
