@@ -50,7 +50,11 @@ def lambda_handler(event, context):
             update_key = request_body.get("updateKey")
             update_value = request_body.get("updateValue")
             
-        
+            if not trans_id or not username or not update_key or not update_value:
+                response = build_response(400, {"Message": "Missing required fields for updating the transaction"})
+            else:
+                response = modify_transaction(trans_id, username, update_key, update_value)
+            
             
                 
 
