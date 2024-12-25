@@ -54,9 +54,118 @@ def lambda_handler(event, context):
                 response = build_response(400, {"Message": "Missing required fields for updating the transaction"})
             else:
                 response = modify_transaction(trans_id, username, update_key, update_value)
+        
+        elif http_method == DELETE_METHOD and path == TRANSACTOIN_PATH:
+            request_body = json.loads(event["body"])
+            trans_id = request_body.get("transId")
+            username = request_body.get("username")
             
-            
+            if not trans_id or not username:
+                response = build_response(400, {"Message": "transId and username are required"})
+            else:
+                response = delete_transaction(trans_id, username)
+        
+        else:
+            response = build_response(404, {"Message": "Path not found"})
+    except Exception as e:
+        logger.exception("Error processing request")
+        response = build_response(500, {"Message": "Internal server error"})
+    return response
+
+def get_transaction(trans_id, username):
+    try:
+        response = table.get_item(
+            Key={
+                "tranId": trans_id,
+                "username": username
+            }
+        )
+        if "Item" in response:
+            return build_response(200, response["Item"])
+        else:
+            return build_response(404, {"Message": f"tranId: {trans_id}, username: {username} not found"})
+    except Exception as e:
+        logger.exception("Error retrieving transaction")
+        return build_response(500, {"Message": "Error retrieving transaction"})
+
+def get_transactions():
+    try:
+        response = table.scan()
+        result = response["Items"]
+
+        while "LastEvaluatedKey" in response:
+            response = table.scan(ExclusiveStartKey=response["LastEvaluatedKey"])
+            result.extend(response["Items"])
+
+        return build_response(200, {"transactions": result})
+    except Exception as e:
+        logger.exception("Error retrieving transactions")
+        return build_response(500, {"Message": "Error retrieving transactions"})
+
+def save_transaction(request_body):
+    try:
+        table.put_item(Item=request_body)
+        return build_response(200, {
+            "Operation": "SAVE",
+            "Message": "SUCCESS",
+            "Item": request_body
+        })
+    except Exception as e:
+        logger.exception("Error saving transaction")
+        return build_response(500, {"Message": "Error saving transaction"})
+
+def modify_transaction(trans_id, username, update_key, update_value):
+    try:
+        response = table.update_item(
+            Key={
+                "transId": trans_id,
+                "username": username
+            },
+            UpdateExpression=f"SET {update_key} = :value",
+            ExpressionAttributeValues={
+                ":value": update_value
+            },
+            ReturnValues="UPDATED_NEW"
+        )
+        return build_response(200, {
+            "Operation": "UPDATE",
+            "Message": "SUCCESS",
+            "UpdatedAttributes": response["Attributes"]
+        })
+    except Exception as e:
+        logger.exception("Error updating transaction")
+        return build_response(500, {"Message": "Error updating transaction"})
+
+def delete_transaction(trans_id, username):
+    try:
+        response = table.delete_item(
+            Key={
+                "transId": trans_id,
+                "username": username
+            },
+            ReturnValues="ALL_OLD"
+        )
+        if "Attributes" in response:
+            return build_response(200, {
+                "Operation": "DELETE",
+                "Message": "SUCCESS",
+                "DeletedItem": response["Attributes"]
+            })
+        else:
+            return build_response(404, {"Message": f"transId: {trans_id}, username: {username} not found"})
+    except Exception as e:
+        logger.exception("Error deleting transaction")
+        return build_response(500, {"Message": "Error deleting transaction"})
                 
 
 def build_response(status_code, body=None):
-    
+    response = {
+        "statusCode": status_code,
+        "headers": {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*"
+        }
+    }
+    if body is not None:
+        response["body"] = json.dumps(body, cls=CustomEncoder)
+    return response
