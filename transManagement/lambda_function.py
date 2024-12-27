@@ -14,7 +14,7 @@ GET_METHOD = "GET"
 POST_METHOD = "POST"
 PATCH_METHOD = "PATCH"
 DELETE_METHOD = "DELETE"
-HEALTH_PATH = "/health"
+HEALTH_PATH = "/healthT"
 TRANSACTOIN_PATH = "/transaction"
 TRANSACTOINS_PATH = "/transactions"
 
@@ -41,8 +41,8 @@ def lambda_handler(event, context):
             response = get_transactions()
             
         elif http_method == POST_METHOD and path == TRANSACTOIN_PATH:
-            response == save_transaction(json.loads(event["body"]))
-            
+            response = save_transaction(json.loads(event["body"]))
+   
         elif http_method == PATCH_METHOD and path == TRANSACTOIN_PATH:
             request_body = json.loads(event["body"])
             trans_id = request_body.get("transId")
@@ -76,14 +76,14 @@ def get_transaction(trans_id, username):
     try:
         response = table.get_item(
             Key={
-                "tranId": trans_id,
+                "transId": trans_id,
                 "username": username
             }
         )
         if "Item" in response:
             return build_response(200, response["Item"])
         else:
-            return build_response(404, {"Message": f"tranId: {trans_id}, username: {username} not found"})
+            return build_response(404, {"Message": f"transId: {trans_id}, username: {username} not found"})
     except Exception as e:
         logger.exception("Error retrieving transaction")
         return build_response(500, {"Message": "Error retrieving transaction"})
