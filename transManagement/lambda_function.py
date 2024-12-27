@@ -31,11 +31,15 @@ def lambda_handler(event, context):
             query_params = event.get("queryStringParameters", {})
             trans_id = query_params.get("transId")
             username = query_params.get("username")
-            
+
             if not trans_id or not username:
                 response = build_response(400, {"Message": "transId and username are required"})
             else:
-                response = get_transaction(trans_id, username)
+                try:
+                    trans_id = int(trans_id)  # Convert transId to an integer
+                    response = get_transaction(trans_id, username)
+                except ValueError:
+                    response = build_response(400, {"Message": "transId must be a valid number"})
             
         elif http_method == GET_METHOD and path == TRANSACTOINS_PATH:
             response = get_transactions()
@@ -74,19 +78,29 @@ def lambda_handler(event, context):
 
 def get_transaction(trans_id, username):
     try:
+        if not isinstance(trans_id, int):
+            try:
+                trans_id = int(trans_id)
+            except ValueError:
+                return build_response(400, {"Message": "transId must be a valid number"})
+
+        logger.info(f"Fetching transaction with Key: {{'transId': {trans_id}, 'username': '{username}'}}")
+
         response = table.get_item(
             Key={
                 "transId": trans_id,
                 "username": username
             }
         )
+
         if "Item" in response:
             return build_response(200, response["Item"])
         else:
-            return build_response(404, {"Message": f"transId: {trans_id}, username: {username} not found"})
+            return build_response(404, {"Message": f"Transaction not found for transId: {trans_id}, username: {username}"})
     except Exception as e:
         logger.exception("Error retrieving transaction")
         return build_response(500, {"Message": "Error retrieving transaction"})
+
 
 def get_transactions():
     try:
