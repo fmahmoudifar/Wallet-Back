@@ -8,7 +8,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 # DynamoDB Table Configuration
-dynamodbTableName = "W3allets"
+dynamodbTableName = "Wallets"
 dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table(dynamodbTableName)
 
@@ -32,12 +32,12 @@ def lambda_handler(event, context):
         elif http_method == GET_METHOD and path == WALLET_PATH:
             query_params = event.get("queryStringParameters", {})
             wallet_id = query_params.get("walletId")
-            user_id = query_params.get("userId")
+            username = query_params.get("username")
 
-            if not wallet_id or not user_id:
-                response = build_response(400, {"Message": "walletId and userId are required"})
+            if not wallet_id or not username:
+                response = build_response(400, {"Message": "walletId and username are required"})
             else:
-                response = get_wallet(wallet_id, user_id)
+                response = get_wallet(wallet_id, username)
         elif http_method == GET_METHOD and path == WALLETS_PATH:
             response = get_wallets()
         elif http_method == POST_METHOD and path == WALLET_PATH:
@@ -45,7 +45,7 @@ def lambda_handler(event, context):
         elif http_method == PATCH_METHOD and path == WALLET_PATH:
             request_body = json.loads(event["body"])
             wallet_id = request_body.get("walletId")
-            user_id = request_body.get("userId")
+            username = request_body.get("username")
             currency = request_body.get("currency")
             wallet_name = request_body.get("walletName")
             wallet_type = request_body.get("walletType")
@@ -53,19 +53,19 @@ def lambda_handler(event, context):
             balance = request_body.get("balance")
             note = request_body.get("note")
 
-            if not wallet_id or not user_id:
+            if not wallet_id or not username:
                 response = build_response(400, {"Message": "Missing required fields for updating wallet"})
             else:
-                response = modify_wallet(wallet_id, user_id, currency, wallet_name, wallet_type, account_number, balance, note)
+                response = modify_wallet(wallet_id, username, currency, wallet_name, wallet_type, account_number, balance, note)
         elif http_method == DELETE_METHOD and path == WALLET_PATH:
             request_body = json.loads(event["body"])
             wallet_id = request_body.get("walletId")
-            user_id = request_body.get("userId")
+            username = request_body.get("username")
 
-            if not wallet_id or not user_id:
-                response = build_response(400, {"Message": "walletId and userId are required for deletion"})
+            if not wallet_id or not username:
+                response = build_response(400, {"Message": "walletId and username are required for deletion"})
             else:
-                response = delete_wallet(wallet_id, user_id)
+                response = delete_wallet(wallet_id, username)
         else:
             response = build_response(404, {"Message": "Path not found"})
     except Exception as e:
@@ -73,18 +73,18 @@ def lambda_handler(event, context):
         response = build_response(500, {"Message": "Internal server error"})
     return response
 
-def get_wallet(wallet_id, user_id):
+def get_wallet(wallet_id, username):
     try:
         response = table.get_item(
             Key={
                 "walletId": wallet_id,
-                "userId": user_id
+                "username": username
             }
         )
         if "Item" in response:
             return build_response(200, response["Item"])
         else:
-            return build_response(404, {"Message": f"walletId: {wallet_id}, userId: {user_id} not found"})
+            return build_response(404, {"Message": f"walletId: {wallet_id}, username: {username} not found"})
     except Exception as e:
         logger.exception("Error retrieving wallet")
         return build_response(500, {"Message": "Error retrieving wallet"})
@@ -115,7 +115,7 @@ def save_wallet(request_body):
         logger.exception("Error saving wallet")
         return build_response(500, {"Message": "Error saving wallet"})
 
-def modify_wallet(wallet_id, user_id, currency, wallet_name, wallet_type, account_number, balance, note):
+def modify_wallet(wallet_id, username, currency, wallet_name, wallet_type, account_number, balance, note):
     try:
         update_expression = "SET currency = :currency, walletName = :walletName, walletType = :walletType, accountNumber = :accountNumber, balance = :balance, note = :note"
         expression_attribute_values = {
@@ -130,7 +130,7 @@ def modify_wallet(wallet_id, user_id, currency, wallet_name, wallet_type, accoun
         response = table.update_item(
             Key={
                 "walletId": wallet_id,
-                "userId": user_id
+                "username": username
             },
             UpdateExpression=update_expression,
             ExpressionAttributeValues=expression_attribute_values,
@@ -145,12 +145,12 @@ def modify_wallet(wallet_id, user_id, currency, wallet_name, wallet_type, accoun
         logger.exception("Error updating wallet")
         return build_response(500, {"Message": "Error updating wallet"})
 
-def delete_wallet(wallet_id, user_id):
+def delete_wallet(wallet_id, username):
     try:
         response = table.delete_item(
             Key={
                 "walletId": wallet_id,
-                "userId": user_id
+                "username": username
             },
             ReturnValues="ALL_OLD"
         )
@@ -161,7 +161,7 @@ def delete_wallet(wallet_id, user_id):
                 "DeletedItem": response["Attributes"]
             })
         else:
-            return build_response(404, {"Message": f"walletId: {wallet_id}, userId: {user_id} not found"})
+            return build_response(404, {"Message": f"walletId: {wallet_id}, username: {username} not found"})
     except Exception as e:
         logger.exception("Error deleting wallet")
         return build_response(500, {"Message": "Error deleting wallet"})
