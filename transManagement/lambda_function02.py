@@ -30,14 +30,14 @@ def lambda_handler(event, context):
         elif http_method == GET_METHOD and path == TRANSACTOIN_PATH:
             query_params = event.get("queryStringParameters", {})
             trans_id = query_params.get("transId")
-            user_id = query_params.get("userId")
+            username = query_params.get("username")
 
-            if not trans_id or not user_id:
-                response = build_response(400, {"Message": "transId and userId are required"})
+            if not trans_id or not username:
+                response = build_response(400, {"Message": "transId and username are required"})
             else:
                 try:
                     trans_id = int(trans_id)  # Convert transId to an integer
-                    response = get_transaction(trans_id, user_id)
+                    response = get_transaction(trans_id, username)
                 except ValueError:
                     response = build_response(400, {"Message": "transId must be a valid number"})
             
@@ -50,24 +50,24 @@ def lambda_handler(event, context):
         elif http_method == PATCH_METHOD and path == TRANSACTOIN_PATH:
             request_body = json.loads(event["body"])
             trans_id = request_body.get("transId")
-            user_id = request_body.get("userId")
+            username = request_body.get("username")
             update_key = request_body.get("updateKey")
             update_value = request_body.get("updateValue")
             
-            if not trans_id or not user_id or not update_key or not update_value:
+            if not trans_id or not username or not update_key or not update_value:
                 response = build_response(400, {"Message": "Missing required fields for updating the transaction"})
             else:
-                response = modify_transaction(trans_id, user_id, update_key, update_value)
+                response = modify_transaction(trans_id, username, update_key, update_value)
         
         elif http_method == DELETE_METHOD and path == TRANSACTOIN_PATH:
             request_body = json.loads(event["body"])
             trans_id = request_body.get("transId")
-            user_id = request_body.get("userId")
+            username = request_body.get("username")
             
-            if not trans_id or not user_id:
-                response = build_response(400, {"Message": "transId and userId are required"})
+            if not trans_id or not username:
+                response = build_response(400, {"Message": "transId and username are required"})
             else:
-                response = delete_transaction(trans_id, user_id)
+                response = delete_transaction(trans_id, username)
         
         else:
             response = build_response(404, {"Message": "Path not found"})
@@ -76,7 +76,7 @@ def lambda_handler(event, context):
         response = build_response(500, {"Message": "Internal server error"})
     return response
 
-def get_transaction(trans_id, user_id):
+def get_transaction(trans_id, username):
     try:
         if not isinstance(trans_id, int):
             try:
@@ -84,19 +84,19 @@ def get_transaction(trans_id, user_id):
             except ValueError:
                 return build_response(400, {"Message": "transId must be a valid number"})
 
-        logger.info(f"Fetching transaction with Key: {{'transId': {trans_id}, 'userId': '{user_id}'}}")
+        logger.info(f"Fetching transaction with Key: {{'transId': {trans_id}, 'username': '{username}'}}")
 
         response = table.get_item(
             Key={
                 "transId": trans_id,
-                "userId": user_id
+                "username": username
             }
         )
 
         if "Item" in response:
             return build_response(200, response["Item"])
         else:
-            return build_response(404, {"Message": f"Transaction not found for transId: {trans_id}, userId: {user_id}"})
+            return build_response(404, {"Message": f"Transaction not found for transId: {trans_id}, username: {username}"})
     except Exception as e:
         logger.exception("Error retrieving transaction")
         return build_response(500, {"Message": "Error retrieving transaction"})
@@ -128,12 +128,12 @@ def save_transaction(request_body):
         logger.exception("Error saving transaction")
         return build_response(500, {"Message": "Error saving transaction"})
 
-def modify_transaction(trans_id, user_id, update_key, update_value):
+def modify_transaction(trans_id, username, update_key, update_value):
     try:
         response = table.update_item(
             Key={
                 "transId": trans_id,
-                "userId": user_id
+                "username": username
             },
             UpdateExpression=f"SET {update_key} = :value",
             ExpressionAttributeValues={
@@ -150,12 +150,12 @@ def modify_transaction(trans_id, user_id, update_key, update_value):
         logger.exception("Error updating transaction")
         return build_response(500, {"Message": "Error updating transaction"})
 
-def delete_transaction(trans_id, user_id):
+def delete_transaction(trans_id, username):
     try:
         response = table.delete_item(
             Key={
                 "transId": trans_id,
-                "userId": user_id
+                "username": username
             },
             ReturnValues="ALL_OLD"
         )
@@ -166,7 +166,7 @@ def delete_transaction(trans_id, user_id):
                 "DeletedItem": response["Attributes"]
             })
         else:
-            return build_response(404, {"Message": f"transId: {trans_id}, userId: {user_id} not found"})
+            return build_response(404, {"Message": f"transId: {trans_id}, username: {username} not found"})
     except Exception as e:
         logger.exception("Error deleting transaction")
         return build_response(500, {"Message": "Error deleting transaction"})

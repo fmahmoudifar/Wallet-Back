@@ -8,7 +8,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 # DynamoDB Table Configuration
-dynamodbTableName = "W3allets"
+dynamodbTableName = "Wallets"
 dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table(dynamodbTableName)
 
