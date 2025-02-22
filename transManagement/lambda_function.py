@@ -128,17 +128,54 @@ def save_transaction(request_body):
         logger.exception("Error saving transaction")
         return build_response(500, {"Message": "Error saving transaction"})
 
-def modify_transaction(trans_id, user_id, update_key, update_value):
+# def modify_transaction(trans_id, user_id, update_key, update_value):
+#     try:
+#         response = table.update_item(
+#             Key={
+#                 "transId": trans_id,
+#                 "userId": user_id
+#             },
+#             UpdateExpression=f"SET {update_key} = :value",
+#             ExpressionAttributeValues={
+#                 ":value": update_value
+#             },
+#             ReturnValues="UPDATED_NEW"
+#         )
+#         return build_response(200, {
+#             "Operation": "UPDATE",
+#             "Message": "SUCCESS",
+#             "UpdatedAttributes": response["Attributes"]
+#         })
+#     except Exception as e:
+#         logger.exception("Error updating transaction")
+#         return build_response(500, {"Message": "Error updating transaction"})
+
+def modify_wallet(trans_id, user_id, currency, type, trans_type, date, from_wallet, to_wallet, main_cat, sub_cat, amount, price, fee, note):
     try:
+        update_expression = """SET type = :type, transType = :transType, date = :date, fromWallet = :fromWallet, toWallet = :toWallet,
+        mainCat = :mainCat, subCat = :subCat, amount = :amount, price = :price, fee = :fee, currency = :currency, note = :note"""
+        expression_attribute_values = {
+            ":type": type,
+            ":transType": trans_type,
+            ":date": date,        
+            ":fromWallet": from_wallet,
+            ":toWallet": to_wallet,
+            ":mainCat": main_cat,
+            ":subCat": sub_cat,
+            ":amount": amount,
+            ":price": price,
+            ":currency": currency,
+            ":fee": fee,
+            ":note": note
+        }
+        
         response = table.update_item(
             Key={
                 "transId": trans_id,
                 "userId": user_id
             },
-            UpdateExpression=f"SET {update_key} = :value",
-            ExpressionAttributeValues={
-                ":value": update_value
-            },
+            UpdateExpression=update_expression,
+            ExpressionAttributeValues=expression_attribute_values,
             ReturnValues="UPDATED_NEW"
         )
         return build_response(200, {
