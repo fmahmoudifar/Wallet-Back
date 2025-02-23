@@ -128,7 +128,7 @@ def save_transaction(request_body):
         logger.exception("Error saving transaction")
         return build_response(500, {"Message": "Error saving transaction"})
 
-def modify_wallet(trans_id, user_id, currency, type, trans_type, date, from_wallet, to_wallet, main_cat, sub_cat, amount, price, fee, note):
+def modify_transaction(trans_id, user_id, currency, type, trans_type, date, from_wallet, to_wallet, main_cat, sub_cat, amount, price, fee, note):
     try:
         update_expression = """SET type = :type, transType = :transType, date = :date, fromWallet = :fromWallet, toWallet = :toWallet,
         mainCat = :mainCat, subCat = :subCat, amount = :amount, price = :price, fee = :fee, currency = :currency, note = :note"""
