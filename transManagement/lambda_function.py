@@ -48,30 +48,26 @@ def lambda_handler(event, context):
             response = save_transaction(json.loads(event["body"]))
    
         elif http_method == PATCH_METHOD and path == TRANSACTOIN_PATH:
-            # request_body = json.loads(event["body"])
-            # trans_id = request_body.get("transId")
-            # user_id = request_body.get("userId")
-            # update_key = request_body.get("updateKey")
-            # update_value = request_body.get("updateValue")
-            
-            # if not trans_id or not user_id or not update_key or not update_value:
-            #     response = build_response(400, {"Message": "Missing required fields for updating the transaction"})
-            # else:
-            #     response = modify_transaction(trans_id, user_id, update_key, update_value)
             request_body = json.loads(event["body"])
-            wallet_id = request_body.get("walletId")
+            trans_id = request_body.get("transId")
             user_id = request_body.get("userId")
+            type = request_body.get("type")
+            trans_type = request_body.get("transType")
+            main_cat = request_body.get("mainCat")
+            sub_cat = request_body.get("subCat")
+            date = request_body.get("date")
+            from_wallet = request_body.get("fromWallet")
+            to_wallet = request_body.get("toWallet")
+            amount = request_body.get("amount")
+            price = request_body.get("price")
             currency = request_body.get("currency")
-            wallet_name = request_body.get("walletName")
-            wallet_type = request_body.get("walletType")
-            account_number = request_body.get("accountNumber")
-            balance = request_body.get("balance")
+            fee = request_body.get("fee")
             note = request_body.get("note")
 
-            if not wallet_id or not user_id:
-                response = build_response(400, {"Message": "Missing required fields for updating wallet"})
+            if not trans_id or not user_id:
+                response = build_response(400, {"Message": "Missing required fields for updating transaction"})
             else:
-                response = modify_wallet(wallet_id, user_id, currency, wallet_name, wallet_type, account_number, balance, note)
+                response = modify_transaction(trans_id, user_id, type, trans_type, main_cat, sub_cat, date, from_wallet, to_wallet, amount, price, currency, fee, note)
         
         elif http_method == DELETE_METHOD and path == TRANSACTOIN_PATH:
             request_body = json.loads(event["body"])
