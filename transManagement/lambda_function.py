@@ -48,16 +48,30 @@ def lambda_handler(event, context):
             response = save_transaction(json.loads(event["body"]))
    
         elif http_method == PATCH_METHOD and path == TRANSACTOIN_PATH:
-            request_body = json.loads(event["body"])
-            trans_id = request_body.get("transId")
-            user_id = request_body.get("userId")
-            update_key = request_body.get("updateKey")
-            update_value = request_body.get("updateValue")
+            # request_body = json.loads(event["body"])
+            # trans_id = request_body.get("transId")
+            # user_id = request_body.get("userId")
+            # update_key = request_body.get("updateKey")
+            # update_value = request_body.get("updateValue")
             
-            if not trans_id or not user_id or not update_key or not update_value:
-                response = build_response(400, {"Message": "Missing required fields for updating the transaction"})
+            # if not trans_id or not user_id or not update_key or not update_value:
+            #     response = build_response(400, {"Message": "Missing required fields for updating the transaction"})
+            # else:
+            #     response = modify_transaction(trans_id, user_id, update_key, update_value)
+            request_body = json.loads(event["body"])
+            wallet_id = request_body.get("walletId")
+            user_id = request_body.get("userId")
+            currency = request_body.get("currency")
+            wallet_name = request_body.get("walletName")
+            wallet_type = request_body.get("walletType")
+            account_number = request_body.get("accountNumber")
+            balance = request_body.get("balance")
+            note = request_body.get("note")
+
+            if not wallet_id or not user_id:
+                response = build_response(400, {"Message": "Missing required fields for updating wallet"})
             else:
-                response = modify_transaction(trans_id, user_id, update_key, update_value)
+                response = modify_wallet(wallet_id, user_id, currency, wallet_name, wallet_type, account_number, balance, note)
         
         elif http_method == DELETE_METHOD and path == TRANSACTOIN_PATH:
             request_body = json.loads(event["body"])
@@ -128,18 +142,18 @@ def save_transaction(request_body):
         logger.exception("Error saving transaction")
         return build_response(500, {"Message": "Error saving transaction"})
 
-def modify_transaction(trans_id, user_id, currency, type, trans_type, date, from_wallet, to_wallet, main_cat, sub_cat, amount, price, fee, note):
+def modify_transaction(trans_id, user_id, type, trans_type, main_cat, sub_cat, date, from_wallet, to_wallet, amount, price, currency, fee, note):
     try:
-        update_expression = """SET type = :type, transType = :transType, date = :date, fromWallet = :fromWallet, toWallet = :toWallet,
-        mainCat = :mainCat, subCat = :subCat, amount = :amount, price = :price, fee = :fee, currency = :currency, note = :note"""
+        update_expression = """SET type = :type, transType = :transType, mainCat = :mainCat, subCat = :subCat, date = :date, fromWallet = :fromWallet,
+          toWallet = :toWallet, amount = :amount, price = :price, currency = :currency, fee = :fee, note = :note"""
         expression_attribute_values = {
             ":type": type,
             ":transType": trans_type,
+            ":mainCat": main_cat,
+            ":subCat": sub_cat,
             ":date": date,        
             ":fromWallet": from_wallet,
             ":toWallet": to_wallet,
-            ":mainCat": main_cat,
-            ":subCat": sub_cat,
             ":amount": amount,
             ":price": price,
             ":currency": currency,

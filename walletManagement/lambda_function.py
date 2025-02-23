@@ -117,7 +117,8 @@ def save_wallet(request_body):
 
 def modify_wallet(wallet_id, user_id, currency, wallet_name, wallet_type, account_number, balance, note):
     try:
-        update_expression = "SET currency = :currency, walletName = :walletName, walletType = :walletType, accountNumber = :accountNumber, balance = :balance, note = :note"
+        update_expression = """SET currency = :currency, walletName = :walletName, walletType = :walletType, 
+        accountNumber = :accountNumber, balance = :balance, note = :note"""
         expression_attribute_values = {
             ":currency": currency,
             ":walletName": wallet_name,
