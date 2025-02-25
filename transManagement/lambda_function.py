@@ -15,8 +15,9 @@ POST_METHOD = "POST"
 PATCH_METHOD = "PATCH"
 DELETE_METHOD = "DELETE"
 HEALTH_PATH = "/health"
-TRANSACTOIN_PATH = "/transaction"
-TRANSACTOINS_PATH = "/transactions"
+TRANSACTION_PATH = "/transaction"
+TRANSACTIONS_PATH = "/transactions"
+
 
 def lambda_handler(event, context):
     logger.info(f"Received event: {event}")    
@@ -27,7 +28,7 @@ def lambda_handler(event, context):
         if http_method == GET_METHOD and path == HEALTH_PATH:
             response = build_response(200, {"status": "Healthy"})
             
-        elif http_method == GET_METHOD and path == TRANSACTOIN_PATH:
+        elif http_method == GET_METHOD and path == TRANSACTION_PATH:
             query_params = event.get("queryStringParameters", {})
             trans_id = query_params.get("transId")
             user_id = query_params.get("userId")
@@ -41,21 +42,21 @@ def lambda_handler(event, context):
                 except ValueError:
                     response = build_response(400, {"Message": "transId must be a valid number"})
             
-        elif http_method == GET_METHOD and path == TRANSACTOINS_PATH:
+        elif http_method == GET_METHOD and path == TRANSACTIONS_PATH:
             response = get_transactions()
             
-        elif http_method == POST_METHOD and path == TRANSACTOIN_PATH:
+        elif http_method == POST_METHOD and path == TRANSACTION_PATH:
             response = save_transaction(json.loads(event["body"]))
    
-        elif http_method == PATCH_METHOD and path == TRANSACTOIN_PATH:
+        elif http_method == PATCH_METHOD and path == TRANSACTION_PATH:
             request_body = json.loads(event["body"])
             trans_id = request_body.get("transId")
             user_id = request_body.get("userId")
-            type = request_body.get("type")
+            mtype = request_body.get("mtype")
             trans_type = request_body.get("transType")
             main_cat = request_body.get("mainCat")
             sub_cat = request_body.get("subCat")
-            date = request_body.get("date")
+            tdate = request_body.get("tdate")
             from_wallet = request_body.get("fromWallet")
             to_wallet = request_body.get("toWallet")
             amount = request_body.get("amount")
@@ -67,9 +68,9 @@ def lambda_handler(event, context):
             if not trans_id or not user_id:
                 response = build_response(400, {"Message": "Missing required fields for updating transaction"})
             else:
-                response = modify_transaction(trans_id, user_id, type, trans_type, main_cat, sub_cat, date, from_wallet, to_wallet, amount, price, currency, fee, note)
+                response = modify_transaction(trans_id, user_id, mtype, trans_type, main_cat, sub_cat, tdate, from_wallet, to_wallet, amount, price, currency, fee, note)
         
-        elif http_method == DELETE_METHOD and path == TRANSACTOIN_PATH:
+        elif http_method == DELETE_METHOD and path == TRANSACTION_PATH:
             request_body = json.loads(event["body"])
             trans_id = request_body.get("transId")
             user_id = request_body.get("userId")
@@ -83,7 +84,7 @@ def lambda_handler(event, context):
             response = build_response(404, {"Message": "Path not found"})
     except Exception as e:
         logger.exception("Error processing request")
-        response = build_response(500, {"Message": "Internal server error"})
+        return build_response(500, {"Message": f"Internal server error: {str(e)}"})
     return response
 
 def get_transaction(trans_id, user_id):
@@ -138,16 +139,16 @@ def save_transaction(request_body):
         logger.exception("Error saving transaction")
         return build_response(500, {"Message": "Error saving transaction"})
 
-def modify_transaction(trans_id, user_id, type, trans_type, main_cat, sub_cat, date, from_wallet, to_wallet, amount, price, currency, fee, note):
+def modify_transaction(trans_id, user_id, mtype, trans_type, main_cat, sub_cat, tdate, from_wallet, to_wallet, amount, price, currency, fee, note):
     try:
-        update_expression = """SET type = :type, transType = :transType, mainCat = :mainCat, subCat = :subCat, date = :date, fromWallet = :fromWallet,
+        update_expression = """SET mtype = :mtype, transType = :transType, mainCat = :mainCat, subCat = :subCat, tdate = :tdate, fromWallet = :fromWallet,
           toWallet = :toWallet, amount = :amount, price = :price, currency = :currency, fee = :fee, note = :note"""
         expression_attribute_values = {
-            ":type": type,
+            ":mtype": mtype,
             ":transType": trans_type,
             ":mainCat": main_cat,
             ":subCat": sub_cat,
-            ":date": date,        
+            ":tdate": tdate,        
             ":fromWallet": from_wallet,
             ":toWallet": to_wallet,
             ":amount": amount,
