@@ -2,6 +2,8 @@ import boto3
 import json
 import logging
 from custom_encoder import CustomEncoder
+from decimal import Decimal
+
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -62,7 +64,7 @@ def lambda_handler(event, context):
             amount = request_body.get("amount")
             price = request_body.get("price")
             currency = request_body.get("currency")
-            fee = request_body.get("fee")
+            fee = Decimal(request_body.get("fee", 0))
             note = request_body.get("note")
 
             if not trans_id or not user_id:
@@ -141,6 +143,10 @@ def save_transaction(request_body):
 
 def modify_transaction(trans_id, user_id, mtype, trans_type, main_cat, sub_cat, tdate, from_wallet, to_wallet, amount, price, currency, fee, note):
     try:
+        fee = float(fee)  # Ensure fee is a float if it's a Decimal
+        amount = float(amount)  # Ensure amount is a float
+        price = float(price)  # Ensure price is a float
+    
         update_expression = """SET mtype = :mtype, transType = :transType, mainCat = :mainCat, subCat = :subCat, tdate = :tdate, fromWallet = :fromWallet,
           toWallet = :toWallet, amount = :amount, price = :price, currency = :currency, fee = :fee, note = :note"""
         expression_attribute_values = {
@@ -148,7 +154,7 @@ def modify_transaction(trans_id, user_id, mtype, trans_type, main_cat, sub_cat, 
             ":transType": trans_type,
             ":mainCat": main_cat,
             ":subCat": sub_cat,
-            ":tdate": tdate,        
+            ":tdate": tdate,
             ":fromWallet": from_wallet,
             ":toWallet": to_wallet,
             ":amount": amount,
