@@ -4,7 +4,6 @@ import logging
 from custom_encoder import CustomEncoder
 from decimal import Decimal
 
-
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
@@ -19,7 +18,6 @@ DELETE_METHOD = "DELETE"
 HEALTH_PATH = "/health"
 TRANSACTION_PATH = "/transaction"
 TRANSACTIONS_PATH = "/transactions"
-
 
 def lambda_handler(event, context):
     logger.info(f"Received event: {event}")    
@@ -38,11 +36,7 @@ def lambda_handler(event, context):
             if not trans_id or not user_id:
                 response = build_response(400, {"Message": "transId and userId are required"})
             else:
-                try:
-                    trans_id = int(trans_id)  # Convert transId to an integer
-                    response = get_transaction(trans_id, user_id)
-                except ValueError:
-                    response = build_response(400, {"Message": "transId must be a valid number"})
+                response = get_transaction(trans_id, user_id)
             
         elif http_method == GET_METHOD and path == TRANSACTIONS_PATH:
             response = get_transactions()
@@ -64,7 +58,7 @@ def lambda_handler(event, context):
             amount = request_body.get("amount")
             price = request_body.get("price")
             currency = request_body.get("currency")
-            fee = Decimal(request_body.get("fee", 0))
+            fee = request_body.get("fee")
             note = request_body.get("note")
 
             if not trans_id or not user_id:
@@ -91,12 +85,6 @@ def lambda_handler(event, context):
 
 def get_transaction(trans_id, user_id):
     try:
-        if not isinstance(trans_id, int):
-            try:
-                trans_id = int(trans_id)
-            except ValueError:
-                return build_response(400, {"Message": "transId must be a valid number"})
-
         logger.info(f"Fetching transaction with Key: {{'transId': {trans_id}, 'userId': '{user_id}'}}")
 
         response = table.get_item(
@@ -114,7 +102,6 @@ def get_transaction(trans_id, user_id):
         logger.exception("Error retrieving transaction")
         return build_response(500, {"Message": "Error retrieving transaction"})
 
-
 def get_transactions():
     try:
         response = table.scan()
@@ -129,8 +116,25 @@ def get_transactions():
         logger.exception("Error retrieving transactions")
         return build_response(500, {"Message": "Error retrieving transactions"})
 
+# def save_transaction(request_body):
+#     try:
+#         table.put_item(Item=request_body)
+#         return build_response(200, {
+#             "Operation": "SAVE",
+#             "Message": "SUCCESS",
+#             "Item": request_body
+#         })
+#     except Exception as e:
+#         logger.exception("Error saving transaction")
+#         return build_response(500, {"Message": "Error saving transaction"})
+
 def save_transaction(request_body):
     try:
+        # Convert amount, fee, and price to float
+        request_body["amount"] = float(request_body["amount"])
+        request_body["fee"] = float(request_body["fee"])
+        request_body["price"] = float(request_body["price"])
+        
         table.put_item(Item=request_body)
         return build_response(200, {
             "Operation": "SAVE",
@@ -141,14 +145,49 @@ def save_transaction(request_body):
         logger.exception("Error saving transaction")
         return build_response(500, {"Message": "Error saving transaction"})
 
+
+# def modify_transaction(trans_id, user_id, mtype, trans_type, main_cat, sub_cat, tdate, from_wallet, to_wallet, amount, price, currency, fee, note):
+#     try:    
+#         update_expression = """SET mtype = :mtype, transType = :transType, mainCat = :mainCat, subCat = :subCat, tdate = :tdate, fromWallet = :fromWallet,
+#           toWallet = :toWallet, amount = :amount, price = :price, currency = :currency, fee = :fee, note = :note"""
+#         expression_attribute_values = {
+#             ":mtype": mtype,
+#             ":transType": trans_type,
+#             ":mainCat": main_cat,
+#             ":subCat": sub_cat,
+#             ":tdate": tdate,
+#             ":fromWallet": from_wallet,
+#             ":toWallet": to_wallet,
+#             ":amount": amount,
+#             ":price": price,
+#             ":currency": currency,
+#             ":fee": fee,
+#             ":note": note
+#         }
+        
+#         response = table.update_item(
+#             Key={
+#                 "transId": trans_id,
+#                 "userId": user_id
+#             },
+#             UpdateExpression=update_expression,
+#             ExpressionAttributeValues=expression_attribute_values,
+#             ReturnValues="UPDATED_NEW"
+#         )
+#         return build_response(200, {
+#             "Operation": "UPDATE",
+#             "Message": "SUCCESS",
+#             "UpdatedAttributes": response["Attributes"]
+#         })
+#     except Exception as e:
+#         logger.exception("Error updating transaction")
+#         return build_response(500, {"Message": "Error updating transaction"})
+
 def modify_transaction(trans_id, user_id, mtype, trans_type, main_cat, sub_cat, tdate, from_wallet, to_wallet, amount, price, currency, fee, note):
     try:
-        fee = float(fee)  # Ensure fee is a float if it's a Decimal
-        amount = float(amount)  # Ensure amount is a float
-        price = float(price)  # Ensure price is a float
-    
-        update_expression = """SET mtype = :mtype, transType = :transType, mainCat = :mainCat, subCat = :subCat, tdate = :tdate, fromWallet = :fromWallet,
-          toWallet = :toWallet, amount = :amount, price = :price, currency = :currency, fee = :fee, note = :note"""
+        update_expression = """SET mtype = :mtype, transType = :transType, mainCat = :mainCat, subCat = :subCat, tdate = :tdate, 
+            fromWallet = :fromWallet, toWallet = :toWallet, amount = :amount, price = :price, currency = :currency, fee = :fee, note = :note"""
+        
         expression_attribute_values = {
             ":mtype": mtype,
             ":transType": trans_type,
@@ -157,18 +196,15 @@ def modify_transaction(trans_id, user_id, mtype, trans_type, main_cat, sub_cat, 
             ":tdate": tdate,
             ":fromWallet": from_wallet,
             ":toWallet": to_wallet,
-            ":amount": amount,
-            ":price": price,
+            ":amount": float(amount),
+            ":price": float(price),
             ":currency": currency,
-            ":fee": fee,
+            ":fee": float(fee),
             ":note": note
         }
         
         response = table.update_item(
-            Key={
-                "transId": trans_id,
-                "userId": user_id
-            },
+            Key={"transId": trans_id, "userId": user_id},
             UpdateExpression=update_expression,
             ExpressionAttributeValues=expression_attribute_values,
             ReturnValues="UPDATED_NEW"
@@ -202,7 +238,7 @@ def delete_transaction(trans_id, user_id):
     except Exception as e:
         logger.exception("Error deleting transaction")
         return build_response(500, {"Message": "Error deleting transaction"})
-                
+
 
 def build_response(status_code, body=None):
     response = {
