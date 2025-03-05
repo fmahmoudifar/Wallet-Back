@@ -146,48 +146,10 @@ def save_transaction(request_body):
         return build_response(500, {"Message": "Error saving transaction"})
 
 
-# def modify_transaction(trans_id, user_id, mtype, trans_type, main_cat, sub_cat, tdate, from_wallet, to_wallet, amount, price, currency, fee, note):
-#     try:    
-#         update_expression = """SET mtype = :mtype, transType = :transType, mainCat = :mainCat, subCat = :subCat, tdate = :tdate, fromWallet = :fromWallet,
-#           toWallet = :toWallet, amount = :amount, price = :price, currency = :currency, fee = :fee, note = :note"""
-#         expression_attribute_values = {
-#             ":mtype": mtype,
-#             ":transType": trans_type,
-#             ":mainCat": main_cat,
-#             ":subCat": sub_cat,
-#             ":tdate": tdate,
-#             ":fromWallet": from_wallet,
-#             ":toWallet": to_wallet,
-#             ":amount": amount,
-#             ":price": price,
-#             ":currency": currency,
-#             ":fee": fee,
-#             ":note": note
-#         }
-        
-#         response = table.update_item(
-#             Key={
-#                 "transId": trans_id,
-#                 "userId": user_id
-#             },
-#             UpdateExpression=update_expression,
-#             ExpressionAttributeValues=expression_attribute_values,
-#             ReturnValues="UPDATED_NEW"
-#         )
-#         return build_response(200, {
-#             "Operation": "UPDATE",
-#             "Message": "SUCCESS",
-#             "UpdatedAttributes": response["Attributes"]
-#         })
-#     except Exception as e:
-#         logger.exception("Error updating transaction")
-#         return build_response(500, {"Message": "Error updating transaction"})
-
 def modify_transaction(trans_id, user_id, mtype, trans_type, main_cat, sub_cat, tdate, from_wallet, to_wallet, amount, price, currency, fee, note):
-    try:
-        update_expression = """SET mtype = :mtype, transType = :transType, mainCat = :mainCat, subCat = :subCat, tdate = :tdate, 
-            fromWallet = :fromWallet, toWallet = :toWallet, amount = :amount, price = :price, currency = :currency, fee = :fee, note = :note"""
-        
+    try:    
+        update_expression = """SET mtype = :mtype, transType = :transType, mainCat = :mainCat, subCat = :subCat, tdate = :tdate, fromWallet = :fromWallet,
+          toWallet = :toWallet, amount = :amount, price = :price, currency = :currency, fee = :fee, note = :note"""
         expression_attribute_values = {
             ":mtype": mtype,
             ":transType": trans_type,
@@ -196,15 +158,18 @@ def modify_transaction(trans_id, user_id, mtype, trans_type, main_cat, sub_cat, 
             ":tdate": tdate,
             ":fromWallet": from_wallet,
             ":toWallet": to_wallet,
-            ":amount": float(amount),
-            ":price": float(price),
+            ":amount": amount,
+            ":price": price,
             ":currency": currency,
-            ":fee": float(fee),
+            ":fee": fee,
             ":note": note
         }
         
         response = table.update_item(
-            Key={"transId": trans_id, "userId": user_id},
+            Key={
+                "transId": trans_id,
+                "userId": user_id
+            },
             UpdateExpression=update_expression,
             ExpressionAttributeValues=expression_attribute_values,
             ReturnValues="UPDATED_NEW"
@@ -217,6 +182,41 @@ def modify_transaction(trans_id, user_id, mtype, trans_type, main_cat, sub_cat, 
     except Exception as e:
         logger.exception("Error updating transaction")
         return build_response(500, {"Message": "Error updating transaction"})
+
+# def modify_transaction(trans_id, user_id, mtype, trans_type, main_cat, sub_cat, tdate, from_wallet, to_wallet, amount, price, currency, fee, note):
+#     try:
+#         update_expression = """SET mtype = :mtype, transType = :transType, mainCat = :mainCat, subCat = :subCat, tdate = :tdate, 
+#             fromWallet = :fromWallet, toWallet = :toWallet, amount = :amount, price = :price, currency = :currency, fee = :fee, note = :note"""
+        
+#         expression_attribute_values = {
+#             ":mtype": mtype,
+#             ":transType": trans_type,
+#             ":mainCat": main_cat,
+#             ":subCat": sub_cat,
+#             ":tdate": tdate,
+#             ":fromWallet": from_wallet,
+#             ":toWallet": to_wallet,
+#             ":amount": float(amount),
+#             ":price": float(price),
+#             ":currency": currency,
+#             ":fee": float(fee),
+#             ":note": note
+#         }
+        
+#         response = table.update_item(
+#             Key={"transId": trans_id, "userId": user_id},
+#             UpdateExpression=update_expression,
+#             ExpressionAttributeValues=expression_attribute_values,
+#             ReturnValues="UPDATED_NEW"
+#         )
+#         return build_response(200, {
+#             "Operation": "UPDATE",
+#             "Message": "SUCCESS",
+#             "UpdatedAttributes": response["Attributes"]
+#         })
+#     except Exception as e:
+#         logger.exception("Error updating transaction")
+#         return build_response(500, {"Message": "Error updating transaction"})
 
 def delete_transaction(trans_id, user_id):
     try:

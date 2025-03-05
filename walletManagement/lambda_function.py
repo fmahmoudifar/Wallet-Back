@@ -1,3 +1,4 @@
+from decimal import Decimal
 import boto3
 import json
 import logging
@@ -103,8 +104,22 @@ def get_wallets():
         logger.exception("Error retrieving wallets")
         return build_response(500, {"Message": "Error retrieving wallets"})
 
+# def save_wallet(request_body):
+#     try:
+#         table.put_item(Item=request_body)
+#         return build_response(200, {
+#             "Operation": "SAVE",
+#             "Message": "SUCCESS",
+#             "Item": request_body
+#         })
+#     except Exception as e:
+#         logger.exception("Error saving wallet")
+#         return build_response(500, {"Message": "Error saving wallet"})
+
 def save_wallet(request_body):
     try:
+        if "balance" in request_body:
+            request_body["balance"] = Decimal(str(float(request_body["balance"])))
         table.put_item(Item=request_body)
         return build_response(200, {
             "Operation": "SAVE",
