@@ -104,22 +104,8 @@ def get_wallets():
         logger.exception("Error retrieving wallets")
         return build_response(500, {"Message": "Error retrieving wallets"})
 
-# def save_wallet(request_body):
-#     try:
-#         table.put_item(Item=request_body)
-#         return build_response(200, {
-#             "Operation": "SAVE",
-#             "Message": "SUCCESS",
-#             "Item": request_body
-#         })
-#     except Exception as e:
-#         logger.exception("Error saving wallet")
-#         return build_response(500, {"Message": "Error saving wallet"})
-
 def save_wallet(request_body):
     try:
-        if "balance" in request_body:
-            request_body["balance"] = Decimal(str(float(request_body["balance"])))
         table.put_item(Item=request_body)
         return build_response(200, {
             "Operation": "SAVE",
@@ -130,6 +116,20 @@ def save_wallet(request_body):
         logger.exception("Error saving wallet")
         return build_response(500, {"Message": "Error saving wallet"})
 
+# def save_wallet(request_body):
+#     try:
+#         if "balance" in request_body:
+#             request_body["balance"] = Decimal(request_body["balance"])
+#         table.put_item(Item=request_body)
+#         return build_response(200, {
+#             "Operation": "SAVE",
+#             "Message": "SUCCESS",
+#             "Item": request_body
+#         })
+#     except Exception as e:
+#         logger.exception("Error saving wallet")
+#         return build_response(500, {"Message": "Error saving wallet"})
+
 def modify_wallet(wallet_id, user_id, currency, wallet_name, wallet_type, account_number, balance, note):
     try:
         update_expression = """SET currency = :currency, walletName = :walletName, walletType = :walletType, 
@@ -139,6 +139,7 @@ def modify_wallet(wallet_id, user_id, currency, wallet_name, wallet_type, accoun
             ":walletName": wallet_name,
             ":walletType": wallet_type,
             ":accountNumber": account_number,
+            # ":balance": Decimal(balance),
             ":balance": balance,
             ":note": note
         }
