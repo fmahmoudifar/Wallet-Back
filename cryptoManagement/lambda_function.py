@@ -15,7 +15,7 @@ GET_METHOD = "GET"
 POST_METHOD = "POST"
 PATCH_METHOD = "PATCH"
 DELETE_METHOD = "DELETE"
-HEALTH_PATH = "/health"
+HEALTH_PATH = "/healthC"
 CRYPTO_PATH = "/crypto"
 CRYPTOS_PATH = "/cryptos"
 
@@ -116,25 +116,8 @@ def get_cryptos():
         logger.exception("Error retrieving cryptos")
         return build_response(500, {"Message": "Error retrieving cryptos"})
 
-# def save_crypto(request_body):
-#     try:
-#         table.put_item(Item=request_body)
-#         return build_response(200, {
-#             "Operation": "SAVE",
-#             "Message": "SUCCESS",
-#             "Item": request_body
-#         })
-#     except Exception as e:
-#         logger.exception("Error saving crypto")
-#         return build_response(500, {"Message": "Error saving crypto"})
-
 def save_crypto(request_body):
     try:
-        # Convert amount, fee, and price to float
-        request_body["amount"] = float(request_body["amount"])
-        request_body["fee"] = float(request_body["fee"])
-        request_body["price"] = float(request_body["price"])
-        
         table.put_item(Item=request_body)
         return build_response(200, {
             "Operation": "SAVE",
@@ -144,6 +127,23 @@ def save_crypto(request_body):
     except Exception as e:
         logger.exception("Error saving crypto")
         return build_response(500, {"Message": "Error saving crypto"})
+
+# def save_crypto(request_body):
+#     try:
+#         # Convert amount, fee, and price to float
+#         request_body["amount"] = float(request_body["amount"])
+#         request_body["fee"] = float(request_body["fee"])
+#         request_body["price"] = float(request_body["price"])
+        
+#         table.put_item(Item=request_body)
+#         return build_response(200, {
+#             "Operation": "SAVE",
+#             "Message": "SUCCESS",
+#             "Item": request_body
+#         })
+#     except Exception as e:
+#         logger.exception("Error saving crypto")
+#         return build_response(500, {"Message": "Error saving crypto"})
 
 
 def modify_crypto(crypto_id, user_id, mtype, crypto_type, main_cat, sub_cat, tdate, from_wallet, to_wallet, amount, price, currency, fee, note):

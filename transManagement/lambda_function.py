@@ -15,7 +15,7 @@ GET_METHOD = "GET"
 POST_METHOD = "POST"
 PATCH_METHOD = "PATCH"
 DELETE_METHOD = "DELETE"
-HEALTH_PATH = "/health"
+HEALTH_PATH = "/healthT"
 TRANSACTION_PATH = "/transaction"
 TRANSACTIONS_PATH = "/transactions"
 
@@ -116,25 +116,8 @@ def get_transactions():
         logger.exception("Error retrieving transactions")
         return build_response(500, {"Message": "Error retrieving transactions"})
 
-# def save_transaction(request_body):
-#     try:
-#         table.put_item(Item=request_body)
-#         return build_response(200, {
-#             "Operation": "SAVE",
-#             "Message": "SUCCESS",
-#             "Item": request_body
-#         })
-#     except Exception as e:
-#         logger.exception("Error saving transaction")
-#         return build_response(500, {"Message": "Error saving transaction"})
-
 def save_transaction(request_body):
     try:
-        # Convert amount, fee, and price to float
-        request_body["amount"] = float(request_body["amount"])
-        request_body["fee"] = float(request_body["fee"])
-        request_body["price"] = float(request_body["price"])
-        
         table.put_item(Item=request_body)
         return build_response(200, {
             "Operation": "SAVE",
@@ -144,6 +127,23 @@ def save_transaction(request_body):
     except Exception as e:
         logger.exception("Error saving transaction")
         return build_response(500, {"Message": "Error saving transaction"})
+
+# def save_transaction(request_body):
+#     try:
+#         # Convert amount, fee, and price to float
+#         request_body["amount"] = float(request_body["amount"])
+#         request_body["fee"] = float(request_body["fee"])
+#         request_body["price"] = float(request_body["price"])
+        
+#         table.put_item(Item=request_body)
+#         return build_response(200, {
+#             "Operation": "SAVE",
+#             "Message": "SUCCESS",
+#             "Item": request_body
+#         })
+#     except Exception as e:
+#         logger.exception("Error saving transaction")
+#         return build_response(500, {"Message": "Error saving transaction"})
 
 
 def modify_transaction(trans_id, user_id, mtype, trans_type, main_cat, sub_cat, tdate, from_wallet, to_wallet, amount, price, currency, fee, note):
