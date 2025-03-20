@@ -48,14 +48,11 @@ def lambda_handler(event, context):
             request_body = json.loads(event["body"])
             crypto_id = request_body.get("cryptoId")
             user_id = request_body.get("userId")
-            mtype = request_body.get("mtype")
-            crypto_type = request_body.get("cryptoType")
-            main_cat = request_body.get("mainCat")
-            sub_cat = request_body.get("subCat")
+            cryptoName = request_body.get("cryptoName")
             tdate = request_body.get("tdate")
             from_wallet = request_body.get("fromWallet")
             to_wallet = request_body.get("toWallet")
-            amount = request_body.get("amount")
+            quantity = request_body.get("quantity")
             price = request_body.get("price")
             currency = request_body.get("currency")
             fee = request_body.get("fee")
@@ -64,7 +61,7 @@ def lambda_handler(event, context):
             if not crypto_id or not user_id:
                 response = build_response(400, {"Message": "Missing required fields for updating crypto"})
             else:
-                response = modify_crypto(crypto_id, user_id, mtype, crypto_type, main_cat, sub_cat, tdate, from_wallet, to_wallet, amount, price, currency, fee, note)
+                response = modify_crypto(crypto_id, user_id, cryptoName, tdate, from_wallet, to_wallet, quantity, price, currency, fee, note)
         
         elif http_method == DELETE_METHOD and path == CRYPTO_PATH:
             request_body = json.loads(event["body"])
@@ -130,8 +127,8 @@ def save_crypto(request_body):
 
 # def save_crypto(request_body):
 #     try:
-#         # Convert amount, fee, and price to float
-#         request_body["amount"] = float(request_body["amount"])
+#         # Convert quantity, fee, and price to float
+#         request_body["quantity"] = float(request_body["quantity"])
 #         request_body["fee"] = float(request_body["fee"])
 #         request_body["price"] = float(request_body["price"])
         
@@ -146,19 +143,16 @@ def save_crypto(request_body):
 #         return build_response(500, {"Message": "Error saving crypto"})
 
 
-def modify_crypto(crypto_id, user_id, mtype, crypto_type, main_cat, sub_cat, tdate, from_wallet, to_wallet, amount, price, currency, fee, note):
+def modify_crypto(crypto_id, user_id, cryptoName, tdate, from_wallet, to_wallet, quantity, price, currency, fee, note):
     try:    
-        update_expression = """SET mtype = :mtype, cryptoType = :cryptoType, mainCat = :mainCat, subCat = :subCat, tdate = :tdate, fromWallet = :fromWallet,
-          toWallet = :toWallet, amount = :amount, price = :price, currency = :currency, fee = :fee, note = :note"""
+        update_expression = """SET cryptoName = :cryptoName, tdate = :tdate, fromWallet = :fromWallet,
+          toWallet = :toWallet, quantity = :quantity, price = :price, currency = :currency, fee = :fee, note = :note"""
         expression_attribute_values = {
-            ":mtype": mtype,
-            ":cryptoType": crypto_type,
-            ":mainCat": main_cat,
-            ":subCat": sub_cat,
+            ":cryptoName": cryptoName,
             ":tdate": tdate,
             ":fromWallet": from_wallet,
             ":toWallet": to_wallet,
-            ":amount": amount,
+            ":quantity": quantity,
             ":price": price,
             ":currency": currency,
             ":fee": fee,
@@ -183,20 +177,17 @@ def modify_crypto(crypto_id, user_id, mtype, crypto_type, main_cat, sub_cat, tda
         logger.exception("Error updating crypto")
         return build_response(500, {"Message": "Error updating crypto"})
 
-# def modify_crypto(crypto_id, user_id, mtype, crypto_type, main_cat, sub_cat, tdate, from_wallet, to_wallet, amount, price, currency, fee, note):
+# def modify_crypto(crypto_id, user_id, cryptoName, tdate, from_wallet, to_wallet, quantity, price, currency, fee, note):
 #     try:
-#         update_expression = """SET mtype = :mtype, cryptoType = :cryptoType, mainCat = :mainCat, subCat = :subCat, tdate = :tdate, 
-#             fromWallet = :fromWallet, toWallet = :toWallet, amount = :amount, price = :price, currency = :currency, fee = :fee, note = :note"""
+#         update_expression = """SET cryptoName = :cryptoName, tdate = :tdate, 
+#             fromWallet = :fromWallet, toWallet = :toWallet, quantity = :quantity, price = :price, currency = :currency, fee = :fee, note = :note"""
         
 #         expression_attribute_values = {
-#             ":mtype": mtype,
-#             ":cryptoType": crypto_type,
-#             ":mainCat": main_cat,
-#             ":subCat": sub_cat,
+#             ":cryptoName": cryptoName,
 #             ":tdate": tdate,
 #             ":fromWallet": from_wallet,
 #             ":toWallet": to_wallet,
-#             ":amount": float(amount),
+#             ":quantity": float(quantity),
 #             ":price": float(price),
 #             ":currency": currency,
 #             ":fee": float(fee),
