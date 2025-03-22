@@ -48,14 +48,12 @@ def lambda_handler(event, context):
             request_body = json.loads(event["body"])
             trans_id = request_body.get("transId")
             user_id = request_body.get("userId")
-            mtype = request_body.get("mtype")
             trans_type = request_body.get("transType")
             main_cat = request_body.get("mainCat")
-            sub_cat = request_body.get("subCat")
             tdate = request_body.get("tdate")
+            amount = request_body.get("amount")
             from_wallet = request_body.get("fromWallet")
             to_wallet = request_body.get("toWallet")
-            amount = request_body.get("amount")
             price = request_body.get("price")
             currency = request_body.get("currency")
             fee = request_body.get("fee")
@@ -64,7 +62,7 @@ def lambda_handler(event, context):
             if not trans_id or not user_id:
                 response = build_response(400, {"Message": "Missing required fields for updating transaction"})
             else:
-                response = modify_transaction(trans_id, user_id, mtype, trans_type, main_cat, sub_cat, tdate, from_wallet, to_wallet, amount, price, currency, fee, note)
+                response = modify_transaction(trans_id, user_id, trans_type, main_cat, tdate, amount, from_wallet, to_wallet, price, currency, fee, note)
         
         elif http_method == DELETE_METHOD and path == TRANSACTION_PATH:
             request_body = json.loads(event["body"])
@@ -146,19 +144,17 @@ def save_transaction(request_body):
 #         return build_response(500, {"Message": "Error saving transaction"})
 
 
-def modify_transaction(trans_id, user_id, mtype, trans_type, main_cat, sub_cat, tdate, from_wallet, to_wallet, amount, price, currency, fee, note):
+def modify_transaction(trans_id, user_id, trans_type, main_cat, tdate, amount, from_wallet, to_wallet, price, currency, fee, note):
     try:    
-        update_expression = """SET mtype = :mtype, transType = :transType, mainCat = :mainCat, subCat = :subCat, tdate = :tdate, fromWallet = :fromWallet,
+        update_expression = """SET transType = :transType, mainCat = :mainCat, tdate = :tdate, fromWallet = :fromWallet,
           toWallet = :toWallet, amount = :amount, price = :price, currency = :currency, fee = :fee, note = :note"""
         expression_attribute_values = {
-            ":mtype": mtype,
             ":transType": trans_type,
             ":mainCat": main_cat,
-            ":subCat": sub_cat,
             ":tdate": tdate,
+            ":amount": amount,
             ":fromWallet": from_wallet,
             ":toWallet": to_wallet,
-            ":amount": amount,
             ":price": price,
             ":currency": currency,
             ":fee": fee,
