@@ -242,3 +242,4 @@ def build_response(status_code, body=None):
     if body is not None:
         response["body"] = json.dumps(body, cls=CustomEncoder)
     return response
+
