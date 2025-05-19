@@ -6,7 +6,7 @@ from decimal import Decimal
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-
+ 
 dynamodbTableName = "Cryptos"
 dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table(dynamodbTableName)
