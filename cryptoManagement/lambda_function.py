@@ -3,6 +3,8 @@ import json
 import logging
 from custom_encoder import CustomEncoder
 from decimal import Decimal
+from boto3.dynamodb.conditions import Attr
+
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -38,9 +40,17 @@ def lambda_handler(event, context):
             else:
                 response = get_crypto(crypto_id, user_id)
             
+        # elif http_method == GET_METHOD and path == CRYPTOS_PATH:
+        #     response = get_cryptos()
         elif http_method == GET_METHOD and path == CRYPTOS_PATH:
-            response = get_cryptos()
-            
+            query_params = event.get("queryStringParameters", {})
+            user_id = query_params.get("userId")  # or "userId" based on what your front-end sends
+
+            if not user_id:
+                response = build_response(400, {"Message": "Missing required parameter: username"})
+            else:
+                response = get_cryptos(user_id)
+
         elif http_method == POST_METHOD and path == CRYPTO_PATH:
             response = save_crypto(json.loads(event["body"]))
    
@@ -99,19 +109,41 @@ def get_crypto(crypto_id, user_id):
         logger.exception("Error retrieving crypto")
         return build_response(500, {"Message": "Error retrieving crypto"})
 
-def get_cryptos():
+# def get_cryptos():
+#     try:
+#         response = table.scan()
+#         result = response["Items"]
+
+#         while "LastEvaluatedKey" in response:
+#             response = table.scan(ExclusiveStartKey=response["LastEvaluatedKey"])
+#             result.extend(response["Items"])
+
+#         return build_response(200, {"cryptos": result})
+#     except Exception as e:
+#         logger.exception("Error retrieving cryptos")
+#         return build_response(500, {"Message": "Error retrieving cryptos"})
+
+
+def get_cryptos(user_id):
     try:
-        response = table.scan()
+        response = table.scan(
+            FilterExpression=Attr('userId').eq(user_id)  # Use 'username' if that's the field name
+        )
         result = response["Items"]
 
         while "LastEvaluatedKey" in response:
-            response = table.scan(ExclusiveStartKey=response["LastEvaluatedKey"])
+            response = table.scan(
+                ExclusiveStartKey=response["LastEvaluatedKey"],
+                FilterExpression=Attr('userId').eq(user_id)
+            )
             result.extend(response["Items"])
 
         return build_response(200, {"cryptos": result})
     except Exception as e:
         logger.exception("Error retrieving cryptos")
         return build_response(500, {"Message": "Error retrieving cryptos"})
+
+
 
 def save_crypto(request_body):
     try:
