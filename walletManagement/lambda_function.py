@@ -1,19 +1,17 @@
-from decimal import Decimal
 import boto3
 import json
 import logging
 from custom_encoder import CustomEncoder
+from decimal import Decimal
+from boto3.dynamodb.conditions import Attr
 
-# Set up logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-# DynamoDB Table Configuration
 dynamodbTableName = "Wallets"
 dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table(dynamodbTableName)
 
-# HTTP Methods and Paths
 GET_METHOD = "GET"
 POST_METHOD = "POST"
 PATCH_METHOD = "PATCH"
@@ -30,6 +28,7 @@ def lambda_handler(event, context):
     try:
         if http_method == GET_METHOD and path == HEALTH_PATH:
             response = build_response(200, {"status": "Healthy"})
+
         elif http_method == GET_METHOD and path == WALLET_PATH:
             query_params = event.get("queryStringParameters", {})
             wallet_id = query_params.get("walletId")
@@ -39,10 +38,21 @@ def lambda_handler(event, context):
                 response = build_response(400, {"Message": "walletId and userId are required"})
             else:
                 response = get_wallet(wallet_id, user_id)
+
+        # elif http_method == GET_METHOD and path == WALLETS_PATH:
+        #     response = get_wallets()
+    
         elif http_method == GET_METHOD and path == WALLETS_PATH:
-            response = get_wallets()
+            query_params = event.get("queryStringParameters", {})
+            user_id = query_params.get("userId")
+            if not user_id:
+                response = build_response(400, {"Message": "Missing required parameter: username"})
+            else:
+                response = get_wallets(user_id)
+
         elif http_method == POST_METHOD and path == WALLET_PATH:
             response = save_wallet(json.loads(event["body"]))
+
         elif http_method == PATCH_METHOD and path == WALLET_PATH:
             request_body = json.loads(event["body"])
             wallet_id = request_body.get("walletId")
@@ -58,6 +68,7 @@ def lambda_handler(event, context):
                 response = build_response(400, {"Message": "Missing required fields for updating wallet"})
             else:
                 response = modify_wallet(wallet_id, user_id, currency, wallet_name, wallet_type, account_number, balance, note)
+
         elif http_method == DELETE_METHOD and path == WALLET_PATH:
             request_body = json.loads(event["body"])
             wallet_id = request_body.get("walletId")
@@ -67,6 +78,7 @@ def lambda_handler(event, context):
                 response = build_response(400, {"Message": "walletId and userId are required for deletion"})
             else:
                 response = delete_wallet(wallet_id, user_id)
+
         else:
             response = build_response(404, {"Message": "Path not found"})
     except Exception as e:
@@ -90,13 +102,32 @@ def get_wallet(wallet_id, user_id):
         logger.exception("Error retrieving wallet")
         return build_response(500, {"Message": "Error retrieving wallet"})
 
-def get_wallets():
+# def get_wallets():
+#     try:
+#         response = table.scan()
+#         result = response["Items"]
+
+#         while "LastEvaluatedKey" in response:
+#             response = table.scan(ExclusiveStartKey=response["LastEvaluatedKey"])
+#             result.extend(response["Items"])
+
+#         return build_response(200, {"wallets": result})
+#     except Exception as e:
+#         logger.exception("Error retrieving wallets")
+#         return build_response(500, {"Message": "Error retrieving wallets"})
+
+def get_wallets(user_id):
     try:
-        response = table.scan()
+        response = table.scan(
+            FilterExpression=Attr('userId').eq(user_id)
+        )
         result = response["Items"]
 
         while "LastEvaluatedKey" in response:
-            response = table.scan(ExclusiveStartKey=response["LastEvaluatedKey"])
+            response = table.scan(
+                ExclusiveStartKey=response["LastEvaluatedKey"],
+                FilterExpression=Attr('userId').eq(user_id)
+            )
             result.extend(response["Items"])
 
         return build_response(200, {"wallets": result})
@@ -139,7 +170,6 @@ def modify_wallet(wallet_id, user_id, currency, wallet_name, wallet_type, accoun
             ":walletName": wallet_name,
             ":walletType": wallet_type,
             ":accountNumber": account_number,
-            # ":balance": Decimal(balance),
             ":balance": balance,
             ":note": note
         }

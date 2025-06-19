@@ -5,7 +5,6 @@ from custom_encoder import CustomEncoder
 from decimal import Decimal
 from boto3.dynamodb.conditions import Attr
 
-
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
  
@@ -42,10 +41,10 @@ def lambda_handler(event, context):
             
         # elif http_method == GET_METHOD and path == CRYPTOS_PATH:
         #     response = get_cryptos()
+
         elif http_method == GET_METHOD and path == CRYPTOS_PATH:
             query_params = event.get("queryStringParameters", {})
-            user_id = query_params.get("userId")  # or "userId" based on what your front-end sends
-
+            user_id = query_params.get("userId")
             if not user_id:
                 response = build_response(400, {"Message": "Missing required parameter: username"})
             else:
@@ -127,7 +126,7 @@ def get_crypto(crypto_id, user_id):
 def get_cryptos(user_id):
     try:
         response = table.scan(
-            FilterExpression=Attr('userId').eq(user_id)  # Use 'username' if that's the field name
+            FilterExpression=Attr('userId').eq(user_id)
         )
         result = response["Items"]
 
