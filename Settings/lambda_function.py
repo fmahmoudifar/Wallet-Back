@@ -39,8 +39,6 @@ def lambda_handler(event, context):
             else:
                 response = get_setting(setting_id, user_id)
             
-        # elif http_method == GET_METHOD and path == settings_PATH:
-        #     response = get_settings()
 
         elif http_method == GET_METHOD and path == SETS_PATH:
             query_params = event.get("queryStringParameters", {})
