@@ -1,0 +1,198 @@
+import boto3
+import json
+import logging
+from custom_encoder import CustomEncoder
+from decimal import Decimal
+from boto3.dynamodb.conditions import Attr
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+ 
+dynamodbTableName = "settings"
+dynamodb = boto3.resource("dynamodb")
+table = dynamodb.Table(dynamodbTableName)
+
+GET_METHOD = "GET"
+POST_METHOD = "POST"
+PATCH_METHOD = "PATCH"
+DELETE_METHOD = "DELETE"
+HEALTH_PATH = "/healthC"
+SET_PATH = "/setting"
+SETS_PATH = "/settings"
+
+def lambda_handler(event, context):
+    logger.info(f"Received event: {event}")    
+    http_method = event["httpMethod"]
+    path = event["path"]
+    
+    try:
+        if http_method == GET_METHOD and path == HEALTH_PATH:
+            response = build_response(200, {"status": "Healthy"})
+            
+        elif http_method == GET_METHOD and path == SET_PATH:
+            query_params = event.get("queryStringParameters", {})
+            setting_id = query_params.get("settingId")
+            user_id = query_params.get("userId")
+
+            if not setting_id or not user_id:
+                response = build_response(400, {"Message": "settingId and userId are required"})
+            else:
+                response = get_setting(setting_id, user_id)
+            
+        # elif http_method == GET_METHOD and path == settings_PATH:
+        #     response = get_settings()
+
+        elif http_method == GET_METHOD and path == SETS_PATH:
+            query_params = event.get("queryStringParameters", {})
+            user_id = query_params.get("userId")
+            if not user_id:
+                response = build_response(400, {"Message": "Missing required parameter: username"})
+            else:
+                response = get_settings(user_id)
+
+        elif http_method == POST_METHOD and path == SET_PATH:
+            response = save_setting(json.loads(event["body"]))
+   
+        elif http_method == PATCH_METHOD and path == SET_PATH:
+            request_body = json.loads(event["body"])
+            setting_id = request_body.get("settingId")
+            user_id = request_body.get("userId")
+            currency = request_body.get("currency")
+            theme = request_body.get("theme")
+
+            if not setting_id or not user_id:
+                response = build_response(400, {"Message": "Missing required fields for updating setting"})
+            else:
+                response = modify_setting(setting_id, user_id, settingName, tdate, from_wallet, to_wallet, quantity, price, currency, fee, note)
+        
+        elif http_method == DELETE_METHOD and path == SET_PATH:
+            request_body = json.loads(event["body"])
+            setting_id = request_body.get("settingId")
+            user_id = request_body.get("userId")
+            
+            if not setting_id or not user_id:
+                response = build_response(400, {"Message": "settingId and userId are required"})
+            else:
+                response = delete_setting(setting_id, user_id)
+        
+        else:
+            response = build_response(404, {"Message": "Path not found"})
+    except Exception as e:
+        logger.exception("Error processing request")
+        return build_response(500, {"Message": f"Internal server error: {str(e)}"})
+    return response
+
+def get_setting(setting_id, user_id):
+    try:
+        logger.info(f"Fetching setting with Key: {{'settingId': {setting_id}, 'userId': '{user_id}'}}")
+
+        response = table.get_item(
+            Key={
+                "settingId": setting_id,
+                "userId": user_id
+            }
+        )
+
+        if "Item" in response:
+            return build_response(200, response["Item"])
+        else:
+            return build_response(404, {"Message": f"setting not found for settingId: {setting_id}, userId: {user_id}"})
+    except Exception as e:
+        logger.exception("Error retrieving setting")
+        return build_response(500, {"Message": "Error retrieving setting"})
+
+
+def get_settings(user_id):
+    try:
+        response = table.scan(
+            FilterExpression=Attr('userId').eq(user_id)
+        )
+        result = response["Items"]
+
+        while "LastEvaluatedKey" in response:
+            response = table.scan(
+                ExclusiveStartKey=response["LastEvaluatedKey"],
+                FilterExpression=Attr('userId').eq(user_id)
+            )
+            result.extend(response["Items"])
+
+        return build_response(200, {"settings": result})
+    except Exception as e:
+        logger.exception("Error retrieving settings")
+        return build_response(500, {"Message": "Error retrieving settings"})
+
+
+def save_setting(request_body):
+    try:
+        table.put_item(Item=request_body)
+        return build_response(200, {
+            "Operation": "SAVE",
+            "Message": "SUCCESS",
+            "Item": request_body
+        })
+    except Exception as e:
+        logger.exception("Error saving setting")
+        return build_response(500, {"Message": "Error saving setting"})
+
+
+def modify_setting(setting_id, user_id, settingName, tdate, from_wallet, to_wallet, quantity, price, currency, fee, note):
+    try:    
+        update_expression = """SET currency = :currency, theme = :theme"""
+        expression_attribute_values = {
+            ":currency": currency,
+            ":theme": theme
+        }
+        
+        response = table.update_item(
+            Key={
+                "settingId": setting_id,
+                "userId": user_id
+            },
+            UpdateExpression=update_expression,
+            ExpressionAttributeValues=expression_attribute_values,
+            ReturnValues="UPDATED_NEW"
+        )
+        return build_response(200, {
+            "Operation": "UPDATE",
+            "Message": "SUCCESS",
+            "UpdatedAttributes": response["Attributes"]
+        })
+    except Exception as e:
+        logger.exception("Error updating setting")
+        return build_response(500, {"Message": "Error updating setting"})
+
+
+def delete_setting(setting_id, user_id):
+    try:
+        response = table.delete_item(
+            Key={
+                "settingId": setting_id,
+                "userId": user_id
+            },
+            ReturnValues="ALL_OLD"
+        )
+        if "Attributes" in response:
+            return build_response(200, {
+                "Operation": "DELETE",
+                "Message": "SUCCESS",
+                "DeletedItem": response["Attributes"]
+            })
+        else:
+            return build_response(404, {"Message": f"settingId: {setting_id}, userId: {user_id} not found"})
+    except Exception as e:
+        logger.exception("Error deleting setting")
+        return build_response(500, {"Message": "Error deleting setting"})
+
+
+def build_response(status_code, body=None):
+    response = {
+        "statusCode": status_code,
+        "headers": {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*"
+        }
+    }
+    if body is not None:
+        response["body"] = json.dumps(body, cls=CustomEncoder)
+    return response
+
