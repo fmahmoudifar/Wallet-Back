@@ -8,7 +8,7 @@ from boto3.dynamodb.conditions import Attr
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
  
-dynamodbTableName = "settings"
+dynamodbTableName = "Settings"
 dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table(dynamodbTableName)
 
@@ -61,7 +61,7 @@ def lambda_handler(event, context):
             if not setting_id or not user_id:
                 response = build_response(400, {"Message": "Missing required fields for updating setting"})
             else:
-                response = modify_setting(setting_id, user_id, settingName, tdate, from_wallet, to_wallet, quantity, price, currency, fee, note)
+                response = modify_setting(setting_id, user_id, currency, thene)
         
         elif http_method == DELETE_METHOD and path == SET_PATH:
             request_body = json.loads(event["body"])
@@ -133,7 +133,7 @@ def save_setting(request_body):
         return build_response(500, {"Message": "Error saving setting"})
 
 
-def modify_setting(setting_id, user_id, settingName, tdate, from_wallet, to_wallet, quantity, price, currency, fee, note):
+def modify_setting(setting_id, user_id, currency, theme):
     try:    
         update_expression = """SET currency = :currency, theme = :theme"""
         expression_attribute_values = {
