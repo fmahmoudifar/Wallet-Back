@@ -17,8 +17,7 @@ POST_METHOD = "POST"
 PATCH_METHOD = "PATCH"
 DELETE_METHOD = "DELETE"
 HEALTH_PATH = "/healthC"
-SET_PATH = "/setting"
-SETS_PATH = "/settings"
+SET_PATH = "/settings"
 
 def lambda_handler(event, context):
     logger.info(f"Received event: {event}")    
@@ -31,47 +30,23 @@ def lambda_handler(event, context):
             
         elif http_method == GET_METHOD and path == SET_PATH:
             query_params = event.get("queryStringParameters", {})
-            setting_id = query_params.get("settingId")
             user_id = query_params.get("userId")
 
-            if not setting_id or not user_id:
-                response = build_response(400, {"Message": "settingId and userId are required"})
-            else:
-                response = get_setting(setting_id, user_id)
-            
-
-        elif http_method == GET_METHOD and path == SETS_PATH:
-            query_params = event.get("queryStringParameters", {})
-            user_id = query_params.get("userId")
             if not user_id:
-                response = build_response(400, {"Message": "Missing required parameter: username"})
+                response = build_response(400, {"Message": "userId are required"})
             else:
                 response = get_settings(user_id)
-
-        elif http_method == POST_METHOD and path == SET_PATH:
-            response = save_setting(json.loads(event["body"]))
-   
+  
         elif http_method == PATCH_METHOD and path == SET_PATH:
             request_body = json.loads(event["body"])
-            setting_id = request_body.get("settingId")
             user_id = request_body.get("userId")
             currency = request_body.get("currency")
             theme = request_body.get("theme")
 
-            if not setting_id or not user_id:
-                response = build_response(400, {"Message": "Missing required fields for updating setting"})
+            if not user_id:
+                response = build_response(400, {"Message": "Missing required fields for updating settings"})
             else:
-                response = modify_setting(setting_id, user_id, currency, thene)
-        
-        elif http_method == DELETE_METHOD and path == SET_PATH:
-            request_body = json.loads(event["body"])
-            setting_id = request_body.get("settingId")
-            user_id = request_body.get("userId")
-            
-            if not setting_id or not user_id:
-                response = build_response(400, {"Message": "settingId and userId are required"})
-            else:
-                response = delete_setting(setting_id, user_id)
+                response = modify_setting(user_id, currency, theme)
         
         else:
             response = build_response(404, {"Message": "Path not found"})
@@ -80,24 +55,23 @@ def lambda_handler(event, context):
         return build_response(500, {"Message": f"Internal server error: {str(e)}"})
     return response
 
-def get_setting(setting_id, user_id):
-    try:
-        logger.info(f"Fetching setting with Key: {{'settingId': {setting_id}, 'userId': '{user_id}'}}")
+# def get_settings(user_id):
+#     try:
+#         logger.info(f"Fetching setting with Key: {'userId': '{user_id}'}")
 
-        response = table.get_item(
-            Key={
-                "settingId": setting_id,
-                "userId": user_id
-            }
-        )
+#         response = table.get_item(
+#             Key={
+#                 "userId": user_id
+#             }
+#         )
 
-        if "Item" in response:
-            return build_response(200, response["Item"])
-        else:
-            return build_response(404, {"Message": f"setting not found for settingId: {setting_id}, userId: {user_id}"})
-    except Exception as e:
-        logger.exception("Error retrieving setting")
-        return build_response(500, {"Message": "Error retrieving setting"})
+#         if "Item" in response:
+#             return build_response(200, response["Item"])
+#         else:
+#             return build_response(404, {"Message": f"setting not found for userId: {user_id}"})
+#     except Exception as e:
+#         logger.exception("Error retrieving settings")
+#         return build_response(500, {"Message": "Error retrieving settings"})
 
 
 def get_settings(user_id):
@@ -120,20 +94,20 @@ def get_settings(user_id):
         return build_response(500, {"Message": "Error retrieving settings"})
 
 
-def save_setting(request_body):
-    try:
-        table.put_item(Item=request_body)
-        return build_response(200, {
-            "Operation": "SAVE",
-            "Message": "SUCCESS",
-            "Item": request_body
-        })
-    except Exception as e:
-        logger.exception("Error saving setting")
-        return build_response(500, {"Message": "Error saving setting"})
+# def save_setting(request_body):
+#     try:
+#         table.put_item(Item=request_body)
+#         return build_response(200, {
+#             "Operation": "SAVE",
+#             "Message": "SUCCESS",
+#             "Item": request_body
+#         })
+#     except Exception as e:
+#         logger.exception("Error saving setting")
+#         return build_response(500, {"Message": "Error saving setting"})
 
 
-def modify_setting(setting_id, user_id, currency, theme):
+def modify_setting(user_id, currency, theme):
     try:    
         update_expression = """SET currency = :currency, theme = :theme"""
         expression_attribute_values = {
@@ -143,7 +117,6 @@ def modify_setting(setting_id, user_id, currency, theme):
         
         response = table.update_item(
             Key={
-                "settingId": setting_id,
                 "userId": user_id
             },
             UpdateExpression=update_expression,
@@ -158,28 +131,6 @@ def modify_setting(setting_id, user_id, currency, theme):
     except Exception as e:
         logger.exception("Error updating setting")
         return build_response(500, {"Message": "Error updating setting"})
-
-
-def delete_setting(setting_id, user_id):
-    try:
-        response = table.delete_item(
-            Key={
-                "settingId": setting_id,
-                "userId": user_id
-            },
-            ReturnValues="ALL_OLD"
-        )
-        if "Attributes" in response:
-            return build_response(200, {
-                "Operation": "DELETE",
-                "Message": "SUCCESS",
-                "DeletedItem": response["Attributes"]
-            })
-        else:
-            return build_response(404, {"Message": f"settingId: {setting_id}, userId: {user_id} not found"})
-    except Exception as e:
-        logger.exception("Error deleting setting")
-        return build_response(500, {"Message": "Error deleting setting"})
 
 
 def build_response(status_code, body=None):
