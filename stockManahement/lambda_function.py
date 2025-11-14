@@ -52,6 +52,7 @@ def lambda_handler(event, context):
             tdate = request_body.get("tdate")
             from_wallet = request_body.get("fromWallet")
             to_wallet = request_body.get("toWallet")
+            side = request_body.get("side")
             quantity = request_body.get("quantity")
             price = request_body.get("price")
             currency = request_body.get("currency")
@@ -61,7 +62,7 @@ def lambda_handler(event, context):
             if not stock_id or not user_id:
                 response = build_response(400, {"Message": "Missing required fields for updating stock"})
             else:
-                response = modify_stock(stock_id, user_id, stockName, tdate, from_wallet, to_wallet, quantity, price, currency, fee, note)
+                response = modify_stock(stock_id, user_id, stockName, tdate, from_wallet, to_wallet, side, quantity, price, currency, fee, note)
         
         elif http_method == DELETE_METHOD and path == STOCK_PATH:
             request_body = json.loads(event["body"])
@@ -126,7 +127,7 @@ def save_stock(request_body):
         return build_response(500, {"Message": "Error saving stock"})
 
 
-def modify_stock(stock_id, user_id, stockName, tdate, from_wallet, to_wallet, quantity, price, currency, fee, note):
+def modify_stock(stock_id, user_id, stockName, tdate, from_wallet, to_wallet, side, quantity, price, currency, fee, note):
     try:    
         update_expression = """SET stockName = :stockName, tdate = :tdate, fromWallet = :fromWallet,
           toWallet = :toWallet, quantity = :quantity, price = :price, currency = :currency, fee = :fee, note = :note"""
@@ -135,6 +136,7 @@ def modify_stock(stock_id, user_id, stockName, tdate, from_wallet, to_wallet, qu
             ":tdate": tdate,
             ":fromWallet": from_wallet,
             ":toWallet": to_wallet,
+            ":side": side,
             ":quantity": quantity,
             ":price": price,
             ":currency": currency,
