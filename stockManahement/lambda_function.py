@@ -130,7 +130,7 @@ def save_stock(request_body):
 def modify_stock(stock_id, user_id, stockName, tdate, from_wallet, to_wallet, side, quantity, price, currency, fee, note):
     try:    
         update_expression = """SET stockName = :stockName, tdate = :tdate, fromWallet = :fromWallet,
-          toWallet = :toWallet, quantity = :quantity, price = :price, currency = :currency, fee = :fee, note = :note"""
+          toWallet = :toWallet, side = :side, quantity = :quantity, price = :price, currency = :currency, fee = :fee, note = :note"""
         expression_attribute_values = {
             ":stockName": stockName,
             ":tdate": tdate,

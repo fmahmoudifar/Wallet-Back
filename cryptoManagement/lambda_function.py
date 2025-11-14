@@ -61,6 +61,7 @@ def lambda_handler(event, context):
             tdate = request_body.get("tdate")
             from_wallet = request_body.get("fromWallet")
             to_wallet = request_body.get("toWallet")
+            side = request_body.get("side")
             quantity = request_body.get("quantity")
             price = request_body.get("price")
             currency = request_body.get("currency")
@@ -70,7 +71,7 @@ def lambda_handler(event, context):
             if not crypto_id or not user_id:
                 response = build_response(400, {"Message": "Missing required fields for updating crypto"})
             else:
-                response = modify_crypto(crypto_id, user_id, cryptoName, tdate, from_wallet, to_wallet, quantity, price, currency, fee, note)
+                response = modify_crypto(crypto_id, user_id, cryptoName, tdate, from_wallet, to_wallet, side, quantity, price, currency, fee, note)
         
         elif http_method == DELETE_METHOD and path == CRYPTO_PATH:
             request_body = json.loads(event["body"])
@@ -156,33 +157,17 @@ def save_crypto(request_body):
         logger.exception("Error saving crypto")
         return build_response(500, {"Message": "Error saving crypto"})
 
-# def save_crypto(request_body):
-#     try:
-#         # Convert quantity, fee, and price to float
-#         request_body["quantity"] = float(request_body["quantity"])
-#         request_body["fee"] = float(request_body["fee"])
-#         request_body["price"] = float(request_body["price"])
-        
-#         table.put_item(Item=request_body)
-#         return build_response(200, {
-#             "Operation": "SAVE",
-#             "Message": "SUCCESS",
-#             "Item": request_body
-#         })
-#     except Exception as e:
-#         logger.exception("Error saving crypto")
-#         return build_response(500, {"Message": "Error saving crypto"})
 
-
-def modify_crypto(crypto_id, user_id, cryptoName, tdate, from_wallet, to_wallet, quantity, price, currency, fee, note):
+def modify_crypto(crypto_id, user_id, cryptoName, tdate, from_wallet, to_wallet, side, quantity, price, currency, fee, note):
     try:    
         update_expression = """SET cryptoName = :cryptoName, tdate = :tdate, fromWallet = :fromWallet,
-          toWallet = :toWallet, quantity = :quantity, price = :price, currency = :currency, fee = :fee, note = :note"""
+          toWallet = :toWallet, side = :side, quantity = :quantity, price = :price, currency = :currency, fee = :fee, note = :note"""
         expression_attribute_values = {
             ":cryptoName": cryptoName,
             ":tdate": tdate,
             ":fromWallet": from_wallet,
             ":toWallet": to_wallet,
+            ":side": side,
             ":quantity": quantity,
             ":price": price,
             ":currency": currency,
@@ -208,37 +193,6 @@ def modify_crypto(crypto_id, user_id, cryptoName, tdate, from_wallet, to_wallet,
         logger.exception("Error updating crypto")
         return build_response(500, {"Message": "Error updating crypto"})
 
-# def modify_crypto(crypto_id, user_id, cryptoName, tdate, from_wallet, to_wallet, quantity, price, currency, fee, note):
-#     try:
-#         update_expression = """SET cryptoName = :cryptoName, tdate = :tdate, 
-#             fromWallet = :fromWallet, toWallet = :toWallet, quantity = :quantity, price = :price, currency = :currency, fee = :fee, note = :note"""
-        
-#         expression_attribute_values = {
-#             ":cryptoName": cryptoName,
-#             ":tdate": tdate,
-#             ":fromWallet": from_wallet,
-#             ":toWallet": to_wallet,
-#             ":quantity": float(quantity),
-#             ":price": float(price),
-#             ":currency": currency,
-#             ":fee": float(fee),
-#             ":note": note
-#         }
-        
-#         response = table.update_item(
-#             Key={"cryptoId": crypto_id, "userId": user_id},
-#             UpdateExpression=update_expression,
-#             ExpressionAttributeValues=expression_attribute_values,
-#             ReturnValues="UPDATED_NEW"
-#         )
-#         return build_response(200, {
-#             "Operation": "UPDATE",
-#             "Message": "SUCCESS",
-#             "UpdatedAttributes": response["Attributes"]
-#         })
-#     except Exception as e:
-#         logger.exception("Error updating crypto")
-#         return build_response(500, {"Message": "Error updating crypto"})
 
 def delete_crypto(crypto_id, user_id):
     try:
