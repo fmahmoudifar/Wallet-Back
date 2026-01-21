@@ -7,7 +7,7 @@ from decimal import Decimal
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-dynamodbTableName = "loans"
+dynamodbTableName = "Loans"
 dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table(dynamodbTableName)
 
