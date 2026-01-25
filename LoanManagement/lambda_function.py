@@ -126,8 +126,7 @@ def save_loan(request_body):
         logger.exception("Error saving loan")
         return build_response(500, {"Message": "Error saving loan"})
 
-
-def modify_loan(loan_id, user_id, counterparty, tdate, from_wallet, to_wallet, status, amount, price, currency, fee, note):
+def modify_loan(loan_id, user_id, counterparty, tdate, ddate, from_wallet, to_wallet, status, amount, currency, fee, note):
     try:    
         update_expression = """SET counterparty = :counterparty, tdate = :tdate, ddate = :ddate, fromWallet = :fromWallet,
           toWallet = :toWallet, status = :status, amount = :amount, currency = :currency, fee = :fee, note = :note"""
