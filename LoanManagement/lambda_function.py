@@ -54,7 +54,7 @@ def lambda_handler(event, context):
             ddate = request_body.get("ddate")
             from_wallet = request_body.get("fromWallet")
             to_wallet = request_body.get("toWallet")
-            status = request_body.get("status")
+            action = request_body.get("action")
             amount = request_body.get("amount")
             currency = request_body.get("currency")
             fee = request_body.get("fee")
@@ -63,7 +63,7 @@ def lambda_handler(event, context):
             if not loan_id or not user_id:
                 response = build_response(400, {"Message": "Missing required fields for updating loan"})
             else:
-                response = modify_loan(loan_id, user_id, loan_type, counterparty, tdate, ddate, from_wallet, to_wallet, status, amount, currency, fee, note)
+                response = modify_loan(loan_id, user_id, loan_type, counterparty, tdate, ddate, from_wallet, to_wallet, action, amount, currency, fee, note)
         
         elif http_method == DELETE_METHOD and path == LOAN_PATH:
             request_body = json.loads(event["body"])
@@ -127,14 +127,14 @@ def save_loan(request_body):
         logger.exception("Error saving loan")
         return build_response(500, {"Message": "Error saving loan"})
 
-def modify_loan(loan_id, user_id, loan_type, counterparty, tdate, ddate, from_wallet, to_wallet, status, amount, currency, fee, note):
+def modify_loan(loan_id, user_id, loan_type, counterparty, tdate, ddate, from_wallet, to_wallet, action, amount, currency, fee, note):
     try:    
         update_expression = """SET #type = :type, counterparty = :counterparty, tdate = :tdate, ddate = :ddate, fromWallet = :fromWallet,
-          toWallet = :toWallet, #status = :status, amount = :amount, currency = :currency, fee = :fee, note = :note"""
+          toWallet = :toWallet, #action = :action, amount = :amount, currency = :currency, fee = :fee, note = :note"""
         
         expression_attribute_names = {
             "#type": "type",
-            "#status": "status"
+            "#action": "action"
         }
         
         expression_attribute_values = {
@@ -144,7 +144,7 @@ def modify_loan(loan_id, user_id, loan_type, counterparty, tdate, ddate, from_wa
             ":ddate": ddate,
             ":fromWallet": from_wallet,
             ":toWallet": to_wallet,
-            ":status": status,
+            ":action": action,
             ":amount": amount,
             ":currency": currency,
             ":fee": fee,
