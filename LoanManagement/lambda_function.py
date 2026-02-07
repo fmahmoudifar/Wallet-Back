@@ -129,40 +129,59 @@ def save_loan(request_body):
         return build_response(500, {"Message": "Error saving loan"})
 
 def modify_loan(loan_id, user_id, loan_type, counterparty, tdate, ddate, position, from_wallet, to_wallet, action, amount, currency, fee, note):
-    try:    
-        update_expression = """SET #type = :type, counterparty = :counterparty, tdate = :tdate, ddate = :ddate, position = :position, fromWallet = :fromWallet,
-          toWallet = :toWallet, #action = :action, amount = :amount, currency = :currency, fee = :fee, note = :note"""
-        
-        expression_attribute_names = {
-            "#type": "type",
-            "#action": "action"
+    try:
+        def normalize_value(value):
+            if isinstance(value, str) and value.strip() == "":
+                return None
+            return value
+
+        update_fields = {
+            "type": normalize_value(loan_type),
+            "counterparty": normalize_value(counterparty),
+            "tdate": normalize_value(tdate),
+            "ddate": normalize_value(ddate),
+            "position": normalize_value(position),
+            "fromWallet": normalize_value(from_wallet),
+            "toWallet": normalize_value(to_wallet),
+            "action": normalize_value(action),
+            "amount": normalize_value(amount),
+            "currency": normalize_value(currency),
+            "fee": normalize_value(fee),
+            "note": normalize_value(note)
         }
-        
-        expression_attribute_values = {
-            ":type": loan_type,
-            ":counterparty": counterparty,
-            ":tdate": tdate,
-            ":ddate": ddate,
-            ":position": position,            
-            ":fromWallet": from_wallet,
-            ":toWallet": to_wallet,
-            ":action": action,
-            ":amount": amount,
-            ":currency": currency,
-            ":fee": fee,
-            ":note": note
-        }
-        
-        response = table.update_item(
-            Key={
+
+        update_fields = {key: value for key, value in update_fields.items() if value is not None}
+        if not update_fields:
+            return build_response(400, {"Message": "No fields to update"})
+
+        reserved_keywords = {"type", "action", "position"}
+        expression_attribute_names = {}
+        expression_attribute_values = {}
+        update_clauses = []
+
+        for key, value in update_fields.items():
+            name_key = f"#{key}" if key in reserved_keywords else key
+            value_key = f":{key}"
+            update_clauses.append(f"{name_key} = {value_key}")
+            if name_key.startswith("#"):
+                expression_attribute_names[name_key] = key
+            expression_attribute_values[value_key] = value
+
+        update_expression = "SET " + ", ".join(update_clauses)
+
+        update_kwargs = {
+            "Key": {
                 "loanId": loan_id,
                 "userId": user_id
             },
-            UpdateExpression=update_expression,
-            ExpressionAttributeNames=expression_attribute_names,
-            ExpressionAttributeValues=expression_attribute_values,
-            ReturnValues="UPDATED_NEW"
-        )
+            "UpdateExpression": update_expression,
+            "ExpressionAttributeValues": expression_attribute_values,
+            "ReturnValues": "UPDATED_NEW"
+        }
+        if expression_attribute_names:
+            update_kwargs["ExpressionAttributeNames"] = expression_attribute_names
+
+        response = table.update_item(**update_kwargs)
         return build_response(200, {
             "Operation": "UPDATE",
             "Message": "SUCCESS",
