@@ -52,6 +52,7 @@ def lambda_handler(event, context):
             counterparty = request_body.get("counterparty")
             tdate = request_body.get("tdate")
             ddate = request_body.get("ddate")
+            position = request_body.get("position")
             from_wallet = request_body.get("fromWallet")
             to_wallet = request_body.get("toWallet")
             action = request_body.get("action")
@@ -63,7 +64,7 @@ def lambda_handler(event, context):
             if not loan_id or not user_id:
                 response = build_response(400, {"Message": "Missing required fields for updating loan"})
             else:
-                response = modify_loan(loan_id, user_id, loan_type, counterparty, tdate, ddate, from_wallet, to_wallet, action, amount, currency, fee, note)
+                response = modify_loan(loan_id, user_id, loan_type, counterparty, tdate, ddate, position, from_wallet, to_wallet, action, amount, currency, fee, note)
         
         elif http_method == DELETE_METHOD and path == LOAN_PATH:
             request_body = json.loads(event["body"])
@@ -127,9 +128,9 @@ def save_loan(request_body):
         logger.exception("Error saving loan")
         return build_response(500, {"Message": "Error saving loan"})
 
-def modify_loan(loan_id, user_id, loan_type, counterparty, tdate, ddate, from_wallet, to_wallet, action, amount, currency, fee, note):
+def modify_loan(loan_id, user_id, loan_type, counterparty, tdate, ddate, position, from_wallet, to_wallet, action, amount, currency, fee, note):
     try:    
-        update_expression = """SET #type = :type, counterparty = :counterparty, tdate = :tdate, ddate = :ddate, fromWallet = :fromWallet,
+        update_expression = """SET #type = :type, counterparty = :counterparty, tdate = :tdate, ddate = :ddate, position = :position, fromWallet = :fromWallet,
           toWallet = :toWallet, #action = :action, amount = :amount, currency = :currency, fee = :fee, note = :note"""
         
         expression_attribute_names = {
@@ -142,6 +143,7 @@ def modify_loan(loan_id, user_id, loan_type, counterparty, tdate, ddate, from_wa
             ":counterparty": counterparty,
             ":tdate": tdate,
             ":ddate": ddate,
+            ":position": position,            
             ":fromWallet": from_wallet,
             ":toWallet": to_wallet,
             ":action": action,
