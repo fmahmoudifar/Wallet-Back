@@ -130,44 +130,64 @@ def save_loan(request_body):
 
 def modify_loan(loan_id, user_id, loan_type, counterparty, tdate, ddate, position, from_wallet, to_wallet, action, amount, currency, fee, note):
     try:
-        def normalize_value(value):
-            if isinstance(value, str) and value.strip() == "":
-                return None
-            return value
+        # Fields that can be cleared (set to empty) by the user
+        clearable_fields = {"fromWallet", "toWallet", "ddate", "note"}
 
-        update_fields = {
-            "type": normalize_value(loan_type),
-            "counterparty": normalize_value(counterparty),
-            "tdate": normalize_value(tdate),
-            "ddate": normalize_value(ddate),
-            "position": normalize_value(position),
-            "fromWallet": normalize_value(from_wallet),
-            "toWallet": normalize_value(to_wallet),
-            "action": normalize_value(action),
-            "amount": normalize_value(amount),
-            "currency": normalize_value(currency),
-            "fee": normalize_value(fee),
-            "note": normalize_value(note)
+        all_fields = {
+            "type": loan_type,
+            "counterparty": counterparty,
+            "tdate": tdate,
+            "ddate": ddate,
+            "position": position,
+            "fromWallet": from_wallet,
+            "toWallet": to_wallet,
+            "action": action,
+            "amount": amount,
+            "currency": currency,
+            "fee": fee,
+            "note": note,
         }
 
-        update_fields = {key: value for key, value in update_fields.items() if value is not None}
-        if not update_fields:
+        set_fields = {}
+        remove_fields = []
+
+        for key, value in all_fields.items():
+            if isinstance(value, str) and value.strip() == "":
+                if key in clearable_fields:
+                    remove_fields.append(key)
+                # else: skip non-clearable empty fields (keep old value)
+            elif value is not None:
+                set_fields[key] = value
+
+        if not set_fields and not remove_fields:
             return build_response(400, {"Message": "No fields to update"})
 
         reserved_keywords = {"type", "action", "position"}
         expression_attribute_names = {}
         expression_attribute_values = {}
-        update_clauses = []
+        expression_parts = []
 
-        for key, value in update_fields.items():
-            name_key = f"#{key}" if key in reserved_keywords else key
-            value_key = f":{key}"
-            update_clauses.append(f"{name_key} = {value_key}")
-            if name_key.startswith("#"):
-                expression_attribute_names[name_key] = key
-            expression_attribute_values[value_key] = value
+        if set_fields:
+            set_clauses = []
+            for key, value in set_fields.items():
+                name_key = f"#{key}" if key in reserved_keywords else key
+                value_key = f":{key}"
+                set_clauses.append(f"{name_key} = {value_key}")
+                if name_key.startswith("#"):
+                    expression_attribute_names[name_key] = key
+                expression_attribute_values[value_key] = value
+            expression_parts.append("SET " + ", ".join(set_clauses))
 
-        update_expression = "SET " + ", ".join(update_clauses)
+        if remove_fields:
+            remove_clauses = []
+            for key in remove_fields:
+                name_key = f"#{key}" if key in reserved_keywords else key
+                remove_clauses.append(name_key)
+                if name_key.startswith("#"):
+                    expression_attribute_names[name_key] = key
+            expression_parts.append("REMOVE " + ", ".join(remove_clauses))
+
+        update_expression = " ".join(expression_parts)
 
         update_kwargs = {
             "Key": {
@@ -180,6 +200,9 @@ def modify_loan(loan_id, user_id, loan_type, counterparty, tdate, ddate, positio
         }
         if expression_attribute_names:
             update_kwargs["ExpressionAttributeNames"] = expression_attribute_names
+        # If only REMOVE (no SET), ExpressionAttributeValues will be empty — omit it
+        if not expression_attribute_values:
+            del update_kwargs["ExpressionAttributeValues"]
 
         response = table.update_item(**update_kwargs)
         return build_response(200, {
@@ -225,4 +248,3 @@ def build_response(status_code, body=None):
     if body is not None:
         response["body"] = json.dumps(body, cls=CustomEncoder)
     return response
-
