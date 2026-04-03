@@ -38,7 +38,7 @@ def lambda_handler(event, context):
                 response = build_response(400, {"Message": "walletId and userId are required"})
             else:
                 response = get_wallet(wallet_id, user_id)
-   
+
         elif http_method == GET_METHOD and path == WALLETS_PATH:
             query_params = event.get("queryStringParameters", {})
             user_id = query_params.get("userId")
@@ -60,11 +60,12 @@ def lambda_handler(event, context):
             account_number = request_body.get("accountNumber")
             balance = request_body.get("balance")
             note = request_body.get("note")
+            color = request_body.get("color")
 
             if not wallet_id or not user_id:
                 response = build_response(400, {"Message": "Missing required fields for updating wallet"})
             else:
-                response = modify_wallet(wallet_id, user_id, currency, wallet_name, wallet_type, account_number, balance, note)
+                response = modify_wallet(wallet_id, user_id, currency, wallet_name, wallet_type, account_number, balance, note, color)
 
         elif http_method == DELETE_METHOD and path == WALLET_PATH:
             request_body = json.loads(event["body"])
@@ -130,7 +131,7 @@ def save_wallet(request_body):
         logger.exception("Error saving wallet")
         return build_response(500, {"Message": "Error saving wallet"})
 
-def modify_wallet(wallet_id, user_id, currency, wallet_name, wallet_type, account_number, balance, note):
+def modify_wallet(wallet_id, user_id, currency, wallet_name, wallet_type, account_number, balance, note, color):
     try:
         update_expression = """SET currency = :currency, walletName = :walletName, walletType = :walletType, 
         accountNumber = :accountNumber, balance = :balance, note = :note, color = :color"""
@@ -141,7 +142,7 @@ def modify_wallet(wallet_id, user_id, currency, wallet_name, wallet_type, accoun
             ":accountNumber": account_number,
             ":balance": balance,
             ":note": note,
-            ":color": color,
+            ":color": color
         }
 
         response = table.update_item(
