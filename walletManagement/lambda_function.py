@@ -38,10 +38,7 @@ def lambda_handler(event, context):
                 response = build_response(400, {"Message": "walletId and userId are required"})
             else:
                 response = get_wallet(wallet_id, user_id)
-
-        # elif http_method == GET_METHOD and path == WALLETS_PATH:
-        #     response = get_wallets()
-    
+   
         elif http_method == GET_METHOD and path == WALLETS_PATH:
             query_params = event.get("queryStringParameters", {})
             user_id = query_params.get("userId")
@@ -102,20 +99,6 @@ def get_wallet(wallet_id, user_id):
         logger.exception("Error retrieving wallet")
         return build_response(500, {"Message": "Error retrieving wallet"})
 
-# def get_wallets():
-#     try:
-#         response = table.scan()
-#         result = response["Items"]
-
-#         while "LastEvaluatedKey" in response:
-#             response = table.scan(ExclusiveStartKey=response["LastEvaluatedKey"])
-#             result.extend(response["Items"])
-
-#         return build_response(200, {"wallets": result})
-#     except Exception as e:
-#         logger.exception("Error retrieving wallets")
-#         return build_response(500, {"Message": "Error retrieving wallets"})
-
 def get_wallets(user_id):
     try:
         response = table.scan(
@@ -147,33 +130,20 @@ def save_wallet(request_body):
         logger.exception("Error saving wallet")
         return build_response(500, {"Message": "Error saving wallet"})
 
-# def save_wallet(request_body):
-#     try:
-#         if "balance" in request_body:
-#             request_body["balance"] = Decimal(request_body["balance"])
-#         table.put_item(Item=request_body)
-#         return build_response(200, {
-#             "Operation": "SAVE",
-#             "Message": "SUCCESS",
-#             "Item": request_body
-#         })
-#     except Exception as e:
-#         logger.exception("Error saving wallet")
-#         return build_response(500, {"Message": "Error saving wallet"})
-
 def modify_wallet(wallet_id, user_id, currency, wallet_name, wallet_type, account_number, balance, note):
     try:
         update_expression = """SET currency = :currency, walletName = :walletName, walletType = :walletType, 
-        accountNumber = :accountNumber, balance = :balance, note = :note"""
+        accountNumber = :accountNumber, balance = :balance, note = :note, color = :color"""
         expression_attribute_values = {
             ":currency": currency,
             ":walletName": wallet_name,
             ":walletType": wallet_type,
             ":accountNumber": account_number,
             ":balance": balance,
-            ":note": note
+            ":note": note,
+            ":color": color,
         }
-        
+
         response = table.update_item(
             Key={
                 "walletId": wallet_id,
