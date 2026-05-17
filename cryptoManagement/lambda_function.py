@@ -2,12 +2,11 @@ import boto3
 import json
 import logging
 from custom_encoder import CustomEncoder
-from decimal import Decimal
 from boto3.dynamodb.conditions import Attr
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
- 
+
 dynamodbTableName = "Cryptos"
 dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table(dynamodbTableName)
@@ -16,21 +15,31 @@ GET_METHOD = "GET"
 POST_METHOD = "POST"
 PATCH_METHOD = "PATCH"
 DELETE_METHOD = "DELETE"
+
 HEALTH_PATH = "/healthC"
 CRYPTO_PATH = "/crypto"
 CRYPTOS_PATH = "/cryptos"
 
+
 def lambda_handler(event, context):
-    logger.info(f"Received event: {event}")    
+    logger.info(f"Received event: {event}")
     http_method = event["httpMethod"]
-    path = event["path"]
-    
+
+    _path = event.get("path", "")
+    _stage = (event.get("requestContext") or {}).get("stage")
+    if _stage and _path.startswith("/" + _stage + "/"):
+        _path = _path[len(_stage) + 1:]
+    elif _stage and _path == "/" + _stage:
+        _path = "/"
+
+    path = event.get("resource") or _path
+
     try:
         if http_method == GET_METHOD and path == HEALTH_PATH:
             response = build_response(200, {"status": "Healthy"})
-            
+
         elif http_method == GET_METHOD and path == CRYPTO_PATH:
-            query_params = event.get("queryStringParameters", {})
+            query_params = event.get("queryStringParameters") or {}
             crypto_id = query_params.get("cryptoId")
             user_id = query_params.get("userId")
 
@@ -38,62 +47,78 @@ def lambda_handler(event, context):
                 response = build_response(400, {"Message": "cryptoId and userId are required"})
             else:
                 response = get_crypto(crypto_id, user_id)
-            
-        # elif http_method == GET_METHOD and path == CRYPTOS_PATH:
-        #     response = get_cryptos()
 
         elif http_method == GET_METHOD and path == CRYPTOS_PATH:
-            query_params = event.get("queryStringParameters", {})
+            query_params = event.get("queryStringParameters") or {}
             user_id = query_params.get("userId")
+
             if not user_id:
-                response = build_response(400, {"Message": "Missing required parameter: username"})
+                response = build_response(400, {"Message": "Missing required parameter: userId"})
             else:
                 response = get_cryptos(user_id)
 
         elif http_method == POST_METHOD and path == CRYPTO_PATH:
-            response = save_crypto(json.loads(event["body"]))
-   
+            request_body = json.loads(event.get("body") or "{}")
+            response = save_crypto(request_body)
+
         elif http_method == PATCH_METHOD and path == CRYPTO_PATH:
-            request_body = json.loads(event["body"])
+            request_body = json.loads(event.get("body") or "{}")
             crypto_id = request_body.get("cryptoId")
             user_id = request_body.get("userId")
             cryptoName = request_body.get("cryptoName")
             tdate = request_body.get("tdate")
             from_wallet = request_body.get("fromWallet")
             to_wallet = request_body.get("toWallet")
-            side = request_body.get("side")
+            operation = request_body.get("operation")
             quantity = request_body.get("quantity")
             price = request_body.get("price")
             currency = request_body.get("currency")
             fee = request_body.get("fee")
+            feeCurrency = request_body.get("feeCurrency")
             note = request_body.get("note")
 
             if not crypto_id or not user_id:
                 response = build_response(400, {"Message": "Missing required fields for updating crypto"})
             else:
-                response = modify_crypto(crypto_id, user_id, cryptoName, tdate, from_wallet, to_wallet, side, quantity, price, currency, fee, note)
-        
+                response = modify_crypto(
+                    crypto_id,
+                    user_id,
+                    cryptoName,
+                    tdate,
+                    from_wallet,
+                    to_wallet,
+                    operation,
+                    quantity,
+                    price,
+                    currency,
+                    fee,
+                    feeCurrency,
+                    note
+                )
+
         elif http_method == DELETE_METHOD and path == CRYPTO_PATH:
-            request_body = json.loads(event["body"])
+            request_body = json.loads(event.get("body") or "{}")
             crypto_id = request_body.get("cryptoId")
             user_id = request_body.get("userId")
-            
+
             if not crypto_id or not user_id:
                 response = build_response(400, {"Message": "cryptoId and userId are required"})
             else:
                 response = delete_crypto(crypto_id, user_id)
-        
+
         else:
             response = build_response(404, {"Message": "Path not found"})
+
     except Exception as e:
         logger.exception("Error processing request")
         return build_response(500, {"Message": f"Internal server error: {str(e)}"})
+
     return response
+
 
 def get_crypto(crypto_id, user_id):
     try:
         logger.info(f"Fetching crypto with Key: {{'cryptoId': {crypto_id}, 'userId': '{user_id}'}}")
-
         response = table.get_item(
             Key={
                 "cryptoId": crypto_id,
@@ -103,78 +128,104 @@ def get_crypto(crypto_id, user_id):
 
         if "Item" in response:
             return build_response(200, response["Item"])
-        else:
-            return build_response(404, {"Message": f"crypto not found for cryptoId: {crypto_id}, userId: {user_id}"})
-    except Exception as e:
+        return build_response(404, {"Message": f"crypto not found for cryptoId: {crypto_id}, userId: {user_id}"})
+
+    except Exception:
         logger.exception("Error retrieving crypto")
         return build_response(500, {"Message": "Error retrieving crypto"})
-
-# def get_cryptos():
-#     try:
-#         response = table.scan()
-#         result = response["Items"]
-
-#         while "LastEvaluatedKey" in response:
-#             response = table.scan(ExclusiveStartKey=response["LastEvaluatedKey"])
-#             result.extend(response["Items"])
-
-#         return build_response(200, {"cryptos": result})
-#     except Exception as e:
-#         logger.exception("Error retrieving cryptos")
-#         return build_response(500, {"Message": "Error retrieving cryptos"})
 
 
 def get_cryptos(user_id):
     try:
         response = table.scan(
-            FilterExpression=Attr('userId').eq(user_id)
+            FilterExpression=Attr("userId").eq(user_id)
         )
         result = response["Items"]
 
         while "LastEvaluatedKey" in response:
             response = table.scan(
                 ExclusiveStartKey=response["LastEvaluatedKey"],
-                FilterExpression=Attr('userId').eq(user_id)
+                FilterExpression=Attr("userId").eq(user_id)
             )
             result.extend(response["Items"])
 
         return build_response(200, {"cryptos": result})
-    except Exception as e:
+
+    except Exception:
         logger.exception("Error retrieving cryptos")
         return build_response(500, {"Message": "Error retrieving cryptos"})
 
 
-
 def save_crypto(request_body):
     try:
+        if not request_body.get("operation"):
+            return build_response(400, {"Message": "Missing required field: operation"})
+
+        if not request_body.get("feeCurrency") and request_body.get("currency"):
+            request_body["feeCurrency"] = request_body.get("currency")
+
         table.put_item(Item=request_body)
         return build_response(200, {
             "Operation": "SAVE",
             "Message": "SUCCESS",
             "Item": request_body
         })
-    except Exception as e:
+
+    except Exception:
         logger.exception("Error saving crypto")
         return build_response(500, {"Message": "Error saving crypto"})
 
 
-def modify_crypto(crypto_id, user_id, cryptoName, tdate, from_wallet, to_wallet, side, quantity, price, currency, fee, note):
-    try:    
-        update_expression = """SET cryptoName = :cryptoName, tdate = :tdate, fromWallet = :fromWallet,
-          toWallet = :toWallet, side = :side, quantity = :quantity, price = :price, currency = :currency, fee = :fee, note = :note"""
+def modify_crypto(
+    crypto_id,
+    user_id,
+    cryptoName,
+    tdate,
+    from_wallet,
+    to_wallet,
+    operation,
+    quantity,
+    price,
+    currency,
+    fee,
+    feeCurrency,
+    note
+):
+    try:
+        if not operation:
+            return build_response(400, {"Message": "Missing required field: operation"})
+
+        if not feeCurrency and currency:
+            feeCurrency = currency
+
+        update_expression = """
+        SET cryptoName = :cryptoName,
+            tdate = :tdate,
+            fromWallet = :fromWallet,
+            toWallet = :toWallet,
+            operation = :operation,
+            quantity = :quantity,
+            price = :price,
+            currency = :currency,
+            fee = :fee,
+            feeCurrency = :feeCurrency,
+            note = :note
+        """
+
         expression_attribute_values = {
             ":cryptoName": cryptoName,
             ":tdate": tdate,
             ":fromWallet": from_wallet,
             ":toWallet": to_wallet,
-            ":side": side,
+            ":operation": operation,
             ":quantity": quantity,
             ":price": price,
             ":currency": currency,
             ":fee": fee,
+            ":feeCurrency": feeCurrency,
             ":note": note
         }
-        
+
         response = table.update_item(
             Key={
                 "cryptoId": crypto_id,
@@ -184,12 +235,14 @@ def modify_crypto(crypto_id, user_id, cryptoName, tdate, from_wallet, to_wallet,
             ExpressionAttributeValues=expression_attribute_values,
             ReturnValues="UPDATED_NEW"
         )
+
         return build_response(200, {
             "Operation": "UPDATE",
             "Message": "SUCCESS",
             "UpdatedAttributes": response["Attributes"]
         })
-    except Exception as e:
+
+    except Exception:
         logger.exception("Error updating crypto")
         return build_response(500, {"Message": "Error updating crypto"})
 
@@ -203,15 +256,16 @@ def delete_crypto(crypto_id, user_id):
             },
             ReturnValues="ALL_OLD"
         )
+
         if "Attributes" in response:
             return build_response(200, {
                 "Operation": "DELETE",
                 "Message": "SUCCESS",
                 "DeletedItem": response["Attributes"]
             })
-        else:
-            return build_response(404, {"Message": f"cryptoId: {crypto_id}, userId: {user_id} not found"})
-    except Exception as e:
+        return build_response(404, {"Message": f"cryptoId: {crypto_id}, userId: {user_id} not found"})
+
+    except Exception:
         logger.exception("Error deleting crypto")
         return build_response(500, {"Message": "Error deleting crypto"})
 
@@ -227,4 +281,3 @@ def build_response(status_code, body=None):
     if body is not None:
         response["body"] = json.dumps(body, cls=CustomEncoder)
     return response
-
