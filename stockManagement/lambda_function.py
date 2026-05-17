@@ -22,7 +22,13 @@ STOCKS_PATH = "/stocks"
 def lambda_handler(event, context):
     logger.info(f"Received event: {event}")    
     http_method = event["httpMethod"]
-    path = event["path"]
+    _path = event.get("path", "")
+    _stage = (event.get("requestContext") or {}).get("stage")
+    if _stage and _path.startswith("/" + _stage + "/"):
+        _path = _path[len(_stage) + 1:]
+    elif _stage and _path == "/" + _stage:
+        _path = "/"
+    path = event.get("resource") or _path
     
     try:
         if http_method == GET_METHOD and path == HEALTH_PATH:
@@ -57,12 +63,13 @@ def lambda_handler(event, context):
             price = request_body.get("price")
             currency = request_body.get("currency")
             fee = request_body.get("fee")
+            feeCurrency = request_body.get("feeCurrency")
             note = request_body.get("note")
 
             if not stock_id or not user_id:
                 response = build_response(400, {"Message": "Missing required fields for updating stock"})
             else:
-                response = modify_stock(stock_id, user_id, stockName, tdate, from_wallet, to_wallet, side, quantity, price, currency, fee, note)
+                response = modify_stock(stock_id, user_id, stockName, tdate, from_wallet, to_wallet, side, quantity, price, currency, fee, feeCurrency, note)
         
         elif http_method == DELETE_METHOD and path == STOCK_PATH:
             request_body = json.loads(event["body"])
@@ -127,10 +134,21 @@ def save_stock(request_body):
         return build_response(500, {"Message": "Error saving stock"})
 
 
-def modify_stock(stock_id, user_id, stockName, tdate, from_wallet, to_wallet, side, quantity, price, currency, fee, note):
-    try:    
-        update_expression = """SET stockName = :stockName, tdate = :tdate, fromWallet = :fromWallet,
-          toWallet = :toWallet, side = :side, quantity = :quantity, price = :price, currency = :currency, fee = :fee, note = :note"""
+def modify_stock(stock_id, user_id, stockName, tdate, from_wallet, to_wallet, side, quantity, price, currency, fee, feeCurrency, note):
+    try:
+        update_expression = """
+            SET stockName = :stockName,
+                tdate = :tdate,
+                fromWallet = :fromWallet,
+                toWallet = :toWallet,
+                side = :side,
+                quantity = :quantity,
+                price = :price,
+                currency = :currency,
+                fee = :fee,
+                feeCurrency = :feeCurrency,
+                note = :note
+        """
         expression_attribute_values = {
             ":stockName": stockName,
             ":tdate": tdate,
@@ -141,24 +159,22 @@ def modify_stock(stock_id, user_id, stockName, tdate, from_wallet, to_wallet, si
             ":price": price,
             ":currency": currency,
             ":fee": fee,
+            ":feeCurrency": feeCurrency,
             ":note": note
         }
-        
+
         response = table.update_item(
-            Key={
-                "stockId": stock_id,
-                "userId": user_id
-            },
+            Key={"stockId": stock_id, "userId": user_id},
             UpdateExpression=update_expression,
             ExpressionAttributeValues=expression_attribute_values,
-            ReturnValues="UPDATED_NEW"
+            ReturnValues="UPDATED_NEW",
         )
         return build_response(200, {
             "Operation": "UPDATE",
             "Message": "SUCCESS",
-            "UpdatedAttributes": response["Attributes"]
+            "UpdatedAttributes": response["Attributes"],
         })
-    except Exception as e:
+    except Exception:
         logger.exception("Error updating stock")
         return build_response(500, {"Message": "Error updating stock"})
 
