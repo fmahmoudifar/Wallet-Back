@@ -22,7 +22,13 @@ TRANSACTIONS_PATH = "/transactions"
 def lambda_handler(event, context):
     logger.info(f"Received event: {event}")    
     http_method = event["httpMethod"]
-    path = event["path"]
+    _path = event.get("path", "")
+    _stage = (event.get("requestContext") or {}).get("stage")
+    if _stage and _path.startswith("/" + _stage + "/"):
+        _path = _path[len(_stage) + 1:]
+    elif _stage and _path == "/" + _stage:
+        _path = "/"
+    path = event.get("resource") or _path
     
     try:
         if http_method == GET_METHOD and path == HEALTH_PATH:
