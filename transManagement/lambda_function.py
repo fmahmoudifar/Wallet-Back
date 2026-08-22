@@ -63,11 +63,14 @@ def lambda_handler(event, context):
             currency = request_body.get("currency")
             fee = request_body.get("fee")
             note = request_body.get("note")
+            isTemplate = request_body.get("isTemplate")
+            receivedAmount = request_body.get("receivedAmount")
+            templateDayOfMonth = request_body.get("templateDayOfMonth")
 
             if not trans_id or not user_id:
                 response = build_response(400, {"Message": "Missing required fields for updating transaction"})
             else:
-                response = modify_transaction(trans_id, user_id, trans_type, main_cat, tdate, amount, from_wallet, to_wallet, currency, fee, note)
+                response = modify_transaction(trans_id, user_id, trans_type, main_cat, tdate, amount, from_wallet, to_wallet, currency, fee, note, isTemplate, receivedAmount, templateDayOfMonth)
         
         elif http_method == DELETE_METHOD and path == TRANSACTION_PATH:
             request_body = json.loads(event["body"])
@@ -131,10 +134,11 @@ def save_transaction(request_body):
         logger.exception("Error saving transaction")
         return build_response(500, {"Message": "Error saving transaction"})
 
-def modify_transaction(trans_id, user_id, trans_type, main_cat, tdate, amount, from_wallet, to_wallet, currency, fee, note):
+def modify_transaction(trans_id, user_id, trans_type, main_cat, tdate, amount, from_wallet, to_wallet, currency, fee, note, isTemplate, receivedAmount, templateDayOfMonth):
     try:    
         update_expression = """SET transType = :transType, mainCat = :mainCat, tdate = :tdate, fromWallet = :fromWallet,
-          toWallet = :toWallet, amount = :amount, currency = :currency, fee = :fee, note = :note"""
+          toWallet = :toWallet, amount = :amount, currency = :currency, fee = :fee, note = :note, isTemplate = :isTemplate,
+          receivedAmount = :receivedAmount, templateDayOfMonth = :templateDayOfMonth"""
         expression_attribute_values = {
             ":transType": trans_type,
             ":mainCat": main_cat,
@@ -144,7 +148,10 @@ def modify_transaction(trans_id, user_id, trans_type, main_cat, tdate, amount, f
             ":toWallet": to_wallet,
             ":currency": currency,
             ":fee": fee,
-            ":note": note
+            ":note": note,
+            ":isTemplate": isTemplate,
+            ":receivedAmount": receivedAmount,
+            ":templateDayOfMonth": templateDayOfMonth
         }
         
         response = table.update_item(
